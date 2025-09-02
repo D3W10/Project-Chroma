@@ -1,0 +1,35 @@
+{
+    "name": "project-chroma",
+    "version": "0.1.0",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "tauri": "tauri"
+    },
+    "type": "module",
+    "dependencies": {
+        "@react-router/node": "^7.8.0",
+        "@react-router/serve": "^7.8.0",
+        "@tauri-apps/api": "^2",
+        "@tauri-apps/plugin-opener": "^2",
+        "@tauri-apps/plugin-store": "~2",
+        "isbot": "^5",
+        "motion": "^12.23.12",
+        "react": "^19.1.0",
+        "react-dom": "^19.1.0",
+        "react-router": "^7.8.0"
+    },
+    "devDependencies": {
+        "@react-router/dev": "^7.8.0",
+        "@tailwindcss/vite": "^4.1.12",
+        "@tauri-apps/cli": "^2",
+        "@types/node": "^24.3.0",
+        "@types/react": "^19.1.8",
+        "@types/react-dom": "^19.1.6",
+        "oxlint": "^1.11.2",
+        "tailwindcss": "^4.1.12",
+        "typescript": "~5.9.2",
+        "vite": "^7.0.4"
+    }
+}
