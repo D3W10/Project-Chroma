@@ -13,12 +13,26 @@
         "windows": [
             {
                 "title": "Project Chroma [BETA]",
-                "width": 1000,
-                "height": 600
+                "width": 1280,
+                "height": 800,
+                "minWidth": 1000,
+                "minHeight": 600,
+                "titleBarStyle": "Overlay",
+                "resizable": true,
+                "fullscreen": false,
+                "hiddenTitle": true,
+                "decorations": true,
+                "zoomHotkeysEnabled": false,
+                "trafficLightPosition": {
+                    "x": 15.0,
+                    "y": 22.0
+                }
             }
         ],
         "security": {
-            "csp": null
+            "csp": {
+                "default-src": "'self'"
+            }
         }
     },
     "bundle": {
