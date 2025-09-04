@@ -24,12 +24,18 @@
                 "decorations": true,
                 "zoomHotkeysEnabled": false,
                 "trafficLightPosition": {
-                    "x": 15.0,
-                    "y": 22.0
+                    "x": 18.0,
+                    "y": 25.0
                 }
             }
         ],
         "security": {
+            "assetProtocol": {
+                "enable": true,
+                "scope": [
+                    "**"
+                ]
+            },
             "csp": {
                 "default-src": "'self'"
             }

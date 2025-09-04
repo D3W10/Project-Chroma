@@ -29,6 +29,18 @@ export default tseslint.config([
             "@stylistic/jsx-indent-props": ["warn", 4],
             "@stylistic/eol-last": ["warn", "never"],
             "@stylistic/brace-style": ["warn", "1tbs", { allowSingleLine: true }],
+            "@stylistic/member-delimiter-style": ["warn", {
+                multiline: {
+                    delimiter: "semi",
+                    requireLast: true,
+                },
+                singleline: {
+                    delimiter: "semi",
+                    requireLast: false,
+                },
+                multilineDetection: "brackets",
+            }],
+            "@stylistic/arrow-parens": ["error", "as-needed"],
         },
     },
 ]);
