@@ -15,17 +15,15 @@ use uuid::Uuid;
 pub struct Photo {
     pub id: String,
     pub original_name: String,
-    pub file_name: String,
     pub file_type: String,
     pub file_size: u64,
-    pub width: Option<u32>,
-    pub height: Option<u32>,
+    pub width: u32,
+    pub height: u32,
     pub checksum: String,
     pub is_favorite: bool,
     pub is_screenshot: bool,
     pub is_screen_recording: bool,
     pub created_at: DateTime<Utc>,
-    pub modified_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -54,10 +52,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             get_libraries,
+            check_library_path,
             create_library,
             update_library_path,
             remove_library,
-            check_library_path,
             get_photos,
             add_photo,
             delete_photo,
@@ -92,9 +90,27 @@ fn get_libraries(app: tauri::AppHandle) -> Result<Value, String> {
 }
 
 #[tauri::command]
+fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<bool, String> {
+    let store = get_store(&app)?;
+    let libraries = match store.get("libraries") {
+        Some(Value::Array(arr)) => arr,
+        _ => return Err("No libraries found".to_string()),
+    };
+    for lib in libraries {
+        if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
+            if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
+                let exists = Path::new(path).exists();
+                return Ok(exists);
+            }
+        }
+    }
+    Err("Library not found".to_string())
+}
+
+#[tauri::command]
 fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, path: &str) -> Result<(), String> {
     let base = Path::new(path);
-    let full_path = base.join(".projectchroma");
+    let full_path = base.to_path_buf();
     let store = get_store(&app)?;
 
     match fs::create_dir_all(&full_path) {
@@ -106,11 +122,17 @@ fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, pa
 
     match conn {
         Ok(conn) => {
+            // Ensure folders exist
+            let _ = fs::create_dir_all(full_path.join("originals"));
+            let _ = fs::create_dir_all(full_path.join("thumbnails"));
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS photo (
                     id TEXT PRIMARY KEY,
                     original_name TEXT NOT NULL,
                     file_type TEXT NOT NULL,
+                    file_size INTEGER NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
                     checksum TEXT NOT NULL,
                     is_favorite INTEGER DEFAULT 0,
                     is_screenshot INTEGER DEFAULT 0,
@@ -154,6 +176,7 @@ fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, pa
         _ => vec![],
     };
     libraries.push(serde_json::json!({
+        "id": Uuid::new_v4().to_string(),
         "name": name,
         "icon": icon,
         "color": color,
@@ -168,7 +191,7 @@ fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, pa
 #[tauri::command]
 fn update_library_path(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     new_path: String,
 ) -> Result<(), String> {
     let store = get_store(&app)?;
@@ -177,7 +200,7 @@ fn update_library_path(
         _ => vec![],
     };
     for lib in libraries.iter_mut() {
-        if lib.get("name").and_then(|v| v.as_str()) == Some(library_name.as_str()) {
+        if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
             if let Some(obj) = lib.as_object_mut() {
                 obj.insert("path".to_string(), Value::String(new_path.clone()));
             }
@@ -189,7 +212,7 @@ fn update_library_path(
 }
 
 #[tauri::command]
-fn remove_library(app: tauri::AppHandle, library_name: String) -> Result<(), String> {
+fn remove_library(app: tauri::AppHandle, library_id: String) -> Result<(), String> {
     let store = get_store(&app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr.clone(),
@@ -197,35 +220,14 @@ fn remove_library(app: tauri::AppHandle, library_name: String) -> Result<(), Str
     };
     let filtered: Vec<Value> = libraries
         .into_iter()
-        .filter(|lib| lib.get("name").and_then(|v| v.as_str()) != Some(library_name.as_str()))
+        .filter(|lib| lib.get("id").and_then(|v| v.as_str()) != Some(library_id.as_str()))
         .collect();
     store.set("libraries", Value::Array(filtered));
     store.save().map_err(|e| e.to_string())?;
     Ok(())
 }
 
-#[tauri::command]
-fn check_library_path(
-    app: tauri::AppHandle,
-    library_name: String,
-) -> Result<(bool, String), String> {
-    let store = get_store(&app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr,
-        _ => return Err("No libraries found".to_string()),
-    };
-    for lib in libraries {
-        if lib.get("name").and_then(|v| v.as_str()) == Some(library_name.as_str()) {
-            if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
-                let exists = Path::new(path).exists();
-                return Ok((exists, path.to_string()));
-            }
-        }
-    }
-    Err("Library not found".to_string())
-}
-
-fn get_library_meta_path(app: &tauri::AppHandle, library_name: &str) -> Result<PathBuf, String> {
+fn get_library_meta_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
     let store = get_store(app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
@@ -233,26 +235,8 @@ fn get_library_meta_path(app: &tauri::AppHandle, library_name: &str) -> Result<P
     };
 
     for lib in libraries {
-        if let Some(name) = lib.get("name").and_then(|v| v.as_str()) {
-            if name == library_name {
-                if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
-                    return Ok(Path::new(path).join(".projectchroma"));
-                }
-            }
-        }
-    }
-    Err("Library not found".to_string())
-}
-
-fn get_library_root_path(app: &tauri::AppHandle, library_name: &str) -> Result<PathBuf, String> {
-    let store = get_store(app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr,
-        _ => return Err("No libraries found".to_string()),
-    };
-    for lib in libraries {
-        if let Some(name) = lib.get("name").and_then(|v| v.as_str()) {
-            if name == library_name {
+        if let Some(id) = lib.get("id").and_then(|v| v.as_str()) {
+            if id == library_id {
                 if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
                     return Ok(Path::new(path).to_path_buf());
                 }
@@ -262,8 +246,26 @@ fn get_library_root_path(app: &tauri::AppHandle, library_name: &str) -> Result<P
     Err("Library not found".to_string())
 }
 
-fn get_db_connection(app: &tauri::AppHandle, library_name: &str) -> Result<Connection, String> {
-    let meta_path = get_library_meta_path(app, library_name)?;
+fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
+    let store = get_store(app)?;
+    let libraries = match store.get("libraries") {
+        Some(Value::Array(arr)) => arr,
+        _ => return Err("No libraries found".to_string()),
+    };
+    for lib in libraries {
+        if let Some(id) = lib.get("id").and_then(|v| v.as_str()) {
+            if id == library_id {
+                if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
+                    return Ok(Path::new(path).to_path_buf());
+                }
+            }
+        }
+    }
+    Err("Library not found".to_string())
+}
+
+fn get_db_connection(app: &tauri::AppHandle, library_id: &str) -> Result<Connection, String> {
+    let meta_path = get_library_meta_path(app, library_id)?;
     let db_path = meta_path.join("photos.db");
     Connection::open(db_path).map_err(|e| e.to_string())
 }
@@ -319,8 +321,8 @@ fn try_generate_thumbnail(original: &Path, out_path: &Path, max_size: u32) -> Re
 }
 
 #[tauri::command]
-fn get_photos(app: tauri::AppHandle, library_name: String) -> Result<Vec<Photo>, String> {
-    let conn = get_db_connection(&app, &library_name)?;
+fn get_photos(app: tauri::AppHandle, library_id: String) -> Result<Vec<Photo>, String> {
+    let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn
         .prepare("SELECT * FROM photo ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
@@ -329,29 +331,19 @@ fn get_photos(app: tauri::AppHandle, library_name: String) -> Result<Vec<Photo>,
             Ok(Photo {
                 id: row.get(0)?,
                 original_name: row.get(1)?,
-                file_name: row.get(2)?,
-                file_type: row.get(3)?,
-                file_size: row.get(4)?,
-                width: row.get(5)?,
-                height: row.get(6)?,
-                checksum: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_screenshot: row.get::<_, i32>(9)? != 0,
-                is_screen_recording: row.get::<_, i32>(10)? != 0,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(11)?)
+                file_type: row.get(2)?,
+                file_size: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                checksum: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_screenshot: row.get::<_, i32>(8)? != 0,
+                is_screen_recording: row.get::<_, i32>(9)? != 0,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
                     .map_err(|_e| {
                         rusqlite::Error::InvalidColumnType(
-                            11,
+                            10,
                             "created_at".to_string(),
-                            rusqlite::types::Type::Text,
-                        )
-                    })?
-                    .with_timezone(&Utc),
-                modified_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(12)?)
-                    .map_err(|_e| {
-                        rusqlite::Error::InvalidColumnType(
-                            12,
-                            "modified_at".to_string(),
                             rusqlite::types::Type::Text,
                         )
                     })?
@@ -370,10 +362,10 @@ fn get_photos(app: tauri::AppHandle, library_name: String) -> Result<Vec<Photo>,
 #[tauri::command]
 fn add_photo(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     source_path: String,
 ) -> Result<Photo, String> {
-    let library_root = get_library_root_path(&app, &library_name)?;
+    let library_root = get_library_root_path(&app, &library_id)?;
     fs::create_dir_all(&library_root).map_err(|e| e.to_string())?;
 
     let source_path = Path::new(&source_path);
@@ -393,48 +385,54 @@ fn add_photo(
 
     let file_type = map_extension_to_mime(file_extension);
 
-    let file_size = fs::metadata(source_path).map_err(|e| e.to_string())?.len();
-    let checksum = format!(
-        "{:x}",
-        md5::compute(fs::read(source_path).map_err(|e| e.to_string())?)
-    );
+    let file_data = fs::read(source_path).map_err(|e| e.to_string())?;
+    let checksum = format!("{:x}", md5::compute(&file_data));
+    let file_size = file_data.len() as u64;
+
+    // Get image dimensions if it's a supported image format
+    let (width, height) = if ["jpg", "jpeg", "png", "bmp", "webp", "gif"].contains(&file_extension.to_lowercase().as_str()) {
+        match image::load_from_memory(&file_data) {
+            Ok(img) => img.dimensions(),
+            Err(_) => (0, 0),
+        }
+    } else {
+        (0, 0)
+    };
 
     let photo_id = Uuid::new_v4().to_string();
     let file_name = format!("{}.{}", photo_id, file_extension);
-    let dest_path = library_root.join(&file_name);
+    let originals_dir = library_root.join("originals");
+    fs::create_dir_all(&originals_dir).map_err(|e| e.to_string())?;
+    let dest_path = originals_dir.join(&file_name);
 
     fs::copy(source_path, &dest_path).map_err(|e| e.to_string())?;
 
-    // Generate thumbnail into meta cache
-    let meta_path = get_library_meta_path(&app, &library_name)?;
-    let cache_dir = meta_path.join("cache");
-    let thumb_path = cache_dir.join(format!("{}.webp", photo_id));
+    // Generate thumbnail into thumbnails directory
+    let thumbs_dir = library_root.join("thumbnails");
+    let thumb_path = thumbs_dir.join(format!("{}.webp", photo_id));
     let _ = try_generate_thumbnail(&dest_path, &thumb_path, 512);
 
     let now = Utc::now();
     let photo = Photo {
         id: photo_id.clone(),
         original_name: original_name.to_string(),
-        file_name: file_name.clone(),
         file_type: file_type.to_string(),
         file_size,
-        width: None, // TODO: Extract image dimensions
-        height: None,
+        width,
+        height,
         checksum,
         is_favorite: false,
         is_screenshot: false,
         is_screen_recording: false,
         created_at: now,
-        modified_at: now,
     };
 
-    let conn = get_db_connection(&app, &library_name)?;
+    let conn = get_db_connection(&app, &library_id)?;
     conn.execute(
-        "INSERT INTO photo (id, original_name, file_name, file_type, file_size, width, height, checksum, is_favorite, is_screenshot, is_screen_recording, created_at, modified_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+        "INSERT INTO photo (id, original_name, file_type, file_size, width, height, checksum, is_favorite, is_screenshot, is_screen_recording, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![
             photo.id,
             photo.original_name,
-            photo.file_name,
             photo.file_type,
             photo.file_size,
             photo.width,
@@ -443,8 +441,7 @@ fn add_photo(
             photo.is_favorite as i32,
             photo.is_screenshot as i32,
             photo.is_screen_recording as i32,
-            photo.created_at.to_rfc3339(),
-            photo.modified_at.to_rfc3339()
+            photo.created_at.to_rfc3339()
         ],
     ).map_err(|e| e.to_string())?;
 
@@ -454,12 +451,11 @@ fn add_photo(
 #[tauri::command]
 fn delete_photo(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     photo_id: String,
 ) -> Result<(), String> {
-    let library_root = get_library_root_path(&app, &library_name)?;
-    let meta_path = get_library_meta_path(&app, &library_name)?;
-    let conn = get_db_connection(&app, &library_name)?;
+    let library_root = get_library_root_path(&app, &library_id)?;
+    let conn = get_db_connection(&app, &library_id)?;
 
     // Get photo info before deletion
     let mut stmt = conn
@@ -474,12 +470,12 @@ fn delete_photo(
         .map_err(|e| e.to_string())?;
 
     // Delete file
-    let file_path = library_root.join(&file_name);
+    let file_path = library_root.join("originals").join(&file_name);
     if file_path.exists() {
         fs::remove_file(file_path).map_err(|e| e.to_string())?;
     }
     let id_part = file_name.split('.').next().unwrap_or("");
-    let thumb_path = meta_path.join("cache").join(format!("{}.webp", id_part));
+    let thumb_path = library_root.join("thumbnails").join(format!("{}.webp", id_part));
     if thumb_path.exists() {
         let _ = fs::remove_file(thumb_path);
     }
@@ -490,11 +486,11 @@ fn delete_photo(
 #[tauri::command]
 fn get_thumbnail_path(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     photo_id: String,
 ) -> Result<Option<String>, String> {
-    let meta_path = get_library_meta_path(&app, &library_name)?;
-    let path = meta_path.join("cache").join(format!("{}.webp", photo_id));
+    let library_root = get_library_root_path(&app, &library_id)?;
+    let path = library_root.join("thumbnails").join(format!("{}.webp", photo_id));
     if path.exists() {
         Ok(Some(path.to_string_lossy().to_string()))
     } else {
@@ -505,17 +501,17 @@ fn get_thumbnail_path(
 #[tauri::command]
 fn get_original_path(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     file_name: String,
 ) -> Result<String, String> {
-    let root = get_library_root_path(&app, &library_name)?;
-    let path = root.join(file_name);
+    let root = get_library_root_path(&app, &library_id)?;
+    let path = root.join("originals").join(file_name);
     Ok(path.to_string_lossy().to_string())
 }
 
 #[tauri::command]
-fn get_albums(app: tauri::AppHandle, library_name: String) -> Result<Vec<Album>, String> {
-    let conn = get_db_connection(&app, &library_name)?;
+fn get_albums(app: tauri::AppHandle, library_id: String) -> Result<Vec<Album>, String> {
+    let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn
         .prepare("SELECT * FROM album ORDER BY created_at DESC")
         .map_err(|e| e.to_string())?;
@@ -558,11 +554,11 @@ fn get_albums(app: tauri::AppHandle, library_name: String) -> Result<Vec<Album>,
 #[tauri::command]
 fn create_album(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     name: String,
     description: Option<String>,
 ) -> Result<Album, String> {
-    let conn = get_db_connection(&app, &library_name)?;
+    let conn = get_db_connection(&app, &library_id)?;
     let album_id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
@@ -593,11 +589,11 @@ fn create_album(
 #[tauri::command]
 fn add_photo_to_album(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     album_id: String,
     photo_id: String,
 ) -> Result<(), String> {
-    let conn = get_db_connection(&app, &library_name)?;
+    let conn = get_db_connection(&app, &library_id)?;
     let now = Utc::now();
 
     conn.execute(
@@ -612,11 +608,11 @@ fn add_photo_to_album(
 #[tauri::command]
 fn remove_photo_from_album(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     album_id: String,
     photo_id: String,
 ) -> Result<(), String> {
-    let conn = get_db_connection(&app, &library_name)?;
+    let conn = get_db_connection(&app, &library_id)?;
 
     conn.execute(
         "DELETE FROM album_photo WHERE album_id = ?1 AND photo_id = ?2",
@@ -630,10 +626,10 @@ fn remove_photo_from_album(
 #[tauri::command]
 fn get_album_photos(
     app: tauri::AppHandle,
-    library_name: String,
+    library_id: String,
     album_id: String,
 ) -> Result<Vec<Photo>, String> {
-    let conn = get_db_connection(&app, &library_name)?;
+    let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn
         .prepare(
             "SELECT p.* FROM photo p 
@@ -648,29 +644,19 @@ fn get_album_photos(
             Ok(Photo {
                 id: row.get(0)?,
                 original_name: row.get(1)?,
-                file_name: row.get(2)?,
-                file_type: row.get(3)?,
-                file_size: row.get(4)?,
-                width: row.get(5)?,
-                height: row.get(6)?,
-                checksum: row.get(7)?,
-                is_favorite: row.get::<_, i32>(8)? != 0,
-                is_screenshot: row.get::<_, i32>(9)? != 0,
-                is_screen_recording: row.get::<_, i32>(10)? != 0,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(11)?)
+                file_type: row.get(2)?,
+                file_size: row.get(3)?,
+                width: row.get(4)?,
+                height: row.get(5)?,
+                checksum: row.get(6)?,
+                is_favorite: row.get::<_, i32>(7)? != 0,
+                is_screenshot: row.get::<_, i32>(8)? != 0,
+                is_screen_recording: row.get::<_, i32>(9)? != 0,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
                     .map_err(|_e| {
                         rusqlite::Error::InvalidColumnType(
-                            11,
+                            10,
                             "created_at".to_string(),
-                            rusqlite::types::Type::Text,
-                        )
-                    })?
-                    .with_timezone(&Utc),
-                modified_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(12)?)
-                    .map_err(|_e| {
-                        rusqlite::Error::InvalidColumnType(
-                            12,
-                            "modified_at".to_string(),
                             rusqlite::types::Type::Text,
                         )
                     })?

@@ -41,6 +41,7 @@ export default tseslint.config([
                 multilineDetection: "brackets",
             }],
             "@stylistic/arrow-parens": ["error", "as-needed"],
+            "@stylistic/multiline-ternary": ["off"],
         },
     },
 ]);

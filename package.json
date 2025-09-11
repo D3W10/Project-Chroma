@@ -15,6 +15,7 @@
         "@radix-ui/react-slot": "^1.2.3",
         "@react-router/node": "^7.8.0",
         "@react-router/serve": "^7.8.0",
+        "@tanstack/react-query": "^5.87.1",
         "@tanstack/react-router": "^1.131.33",
         "@tanstack/react-router-devtools": "^1.131.33",
         "@tauri-apps/api": "^2",
@@ -32,7 +33,8 @@
         "react-dom": "^19.1.0",
         "react-router": "^7.8.0",
         "sonner": "^2.0.7",
-        "tailwind-merge": "^3.3.1"
+        "tailwind-merge": "^3.3.1",
+        "zustand": "^5.0.8"
     },
     "devDependencies": {
         "@eslint/css": "^0.11.0",

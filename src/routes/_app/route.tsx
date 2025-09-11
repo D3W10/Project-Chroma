@@ -2,10 +2,10 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { Sidebar } from "@/components/layout/sidebar";
 
 export const Route = createFileRoute("/_app")({
-    component: AppLayoutComponent,
+    component: RouteComponent,
 });
 
-function AppLayoutComponent() {
+function RouteComponent() {
     return (
         <div className="flex flex-1">
             <Sidebar />
