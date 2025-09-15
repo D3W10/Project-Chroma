@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(:not(.light *)));
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -43,19 +43,36 @@
 
 :root {
     --radius: 0.625rem;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.129 0.042 264.695);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.129 0.042 264.695);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.129 0.042 264.695);
-    --primary: var(--color-sky-500);
+    --background: var(--color-slate-950);
+    --foreground: var(--color-slate-50);
+    --card: var(--color-background);
+    --card-foreground: var(--color-foreground);
+    --popover: var(--color-background);
+    --popover-foreground: var(--color-foreground);
+    --primary: oklch(0.7486 0.1719 209.03);
+    --primary-foreground: var(--color-background);
+    --secondary: var(--color-black);
+    --muted: var(--color-slate-950);
+    --muted-foreground: var(--color-slate-400);
+    --accent: var(--color-slate-900);
+    --accent-foreground: var(--color-foreground);
+    --destructive: var(--color-red-700);
+}
+
+.light {
+    --background: var(--color-white);
+    --foreground: var(--color-slate-950);
+    --card: var(--color-white);
+    --card-foreground: var(--color-slate-950);
+    --popover: var(--color-white);
+    --popover-foreground: var(--color-slate-950);
+    --primary: oklch(0.7486 0.1719 209.03);
     --primary-foreground: oklch(0.984 0.003 247.858);
-    --secondary: oklch(0.968 0.007 247.896);
+    --secondary: var(--color-slate-100);
     --secondary-foreground: oklch(0.208 0.042 265.755);
-    --muted: oklch(0.968 0.007 247.896);
+    --muted: var(--color-slate-100);
     --muted-foreground: oklch(0.554 0.046 257.417);
-    --accent: oklch(0.968 0.007 247.896);
+    --accent: var(--color-slate-100);
     --accent-foreground: oklch(0.208 0.042 265.755);
     --destructive: var(--color-red-500);
     --border: oklch(0.929 0.013 255.508);
@@ -116,7 +133,7 @@
     }
 
     body {
-        @apply bg-slate-100 text-foreground overflow-hidden;
+        @apply bg-secondary text-foreground overflow-hidden;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
@@ -128,4 +145,8 @@
     #app {
         @apply h-screen flex flex-col;
     }
+}
+
+[data-sonner-toast][data-styled=true] [data-title] {
+    @apply font-bold;
 }

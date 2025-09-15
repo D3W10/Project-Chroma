@@ -19,10 +19,10 @@ export function Sidebar() {
                 return (
                     <Link key={item.path} to={item.path}>
                         <Button
-                            variant={isActive ? "secondary" : "ghost"}
+                            variant={isActive ? "outline" : "ghost"}
                             className="w-full h-auto py-3 flex-col gap-1"
                         >
-                            <Icon className="size-7 text-primary" />
+                            <Icon className={`size-7 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
                             <span className="text-sm">{item.label}</span>
                         </Button>
                     </Link>

@@ -40,8 +40,9 @@ export default tseslint.config([
                 },
                 multilineDetection: "brackets",
             }],
-            "@stylistic/arrow-parens": ["error", "as-needed"],
+            "@stylistic/arrow-parens": ["warn", "as-needed"],
             "@stylistic/multiline-ternary": ["off"],
+            "@stylistic/jsx-one-expression-per-line": ["warn", { allow: "single-line" }],
         },
     },
 ]);

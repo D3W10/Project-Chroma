@@ -28,7 +28,12 @@ if (rootElement && !rootElement.innerHTML) {
     root.render(
         <StrictMode>
             <QueryClientProvider client={queryClient}>
-                <Toaster position="bottom-right" closeButton />
+                <Toaster
+                    position="bottom-right"
+                    duration={5000}
+                    icons={{ success: null, warning: null, error: null }}
+                    closeButton
+                />
                 <RouterProvider router={router} />
             </QueryClientProvider>
         </StrictMode>,

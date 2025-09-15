@@ -6,10 +6,13 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use tauri::Wry;
-use tauri_plugin_store::{Store, StoreExt};
+use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
+
+mod modules;
+use modules::config::{
+    get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library
+};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Photo {
@@ -56,6 +59,7 @@ pub fn run() {
             create_library,
             update_library_path,
             remove_library,
+            get_selected_library,
             get_photos,
             add_photo,
             delete_photo,
@@ -73,158 +77,6 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}
-
-fn get_store(app: &tauri::AppHandle) -> Result<Arc<Store<Wry>>, String> {
-    app.store("config.json").map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn get_libraries(app: tauri::AppHandle) -> Result<Value, String> {
-    let store = get_store(&app)?;
-    if let Some(v) = store.get("libraries") {
-        Ok(v.clone())
-    } else {
-        Ok(Value::Array(vec![]))
-    }
-}
-
-#[tauri::command]
-fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<bool, String> {
-    let store = get_store(&app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr,
-        _ => return Err("No libraries found".to_string()),
-    };
-    for lib in libraries {
-        if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
-            if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
-                let exists = Path::new(path).exists();
-                return Ok(exists);
-            }
-        }
-    }
-    Err("Library not found".to_string())
-}
-
-#[tauri::command]
-fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, path: &str) -> Result<(), String> {
-    let base = Path::new(path);
-    let full_path = base.to_path_buf();
-    let store = get_store(&app)?;
-
-    match fs::create_dir_all(&full_path) {
-        Ok(_) => println!("Library created successfully"),
-        Err(e) => println!("Error creating library: {}", e),
-    }
-
-    let conn = Connection::open(full_path.join("photos.db").to_str().unwrap());
-
-    match conn {
-        Ok(conn) => {
-            // Ensure folders exist
-            let _ = fs::create_dir_all(full_path.join("originals"));
-            let _ = fs::create_dir_all(full_path.join("thumbnails"));
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS photo (
-                    id TEXT PRIMARY KEY,
-                    original_name TEXT NOT NULL,
-                    file_type TEXT NOT NULL,
-                    file_size INTEGER NOT NULL,
-                    width INTEGER NOT NULL,
-                    height INTEGER NOT NULL,
-                    checksum TEXT NOT NULL,
-                    is_favorite INTEGER DEFAULT 0,
-                    is_screenshot INTEGER DEFAULT 0,
-                    is_screen_recording INTEGER DEFAULT 0,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            ).map_err(|e| e.to_string())?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT,
-                    cover_photo_type TEXT,
-                    cover_photo_id TEXT,
-                    cover_photo_icon TEXT,
-                    cover_photo_color TEXT,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            ).map_err(|e| e.to_string())?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album_photo (
-                    album_id TEXT NOT NULL,
-                    photo_id TEXT NOT NULL,
-                    added_at TEXT NOT NULL,
-                    PRIMARY KEY (album_id, photo_id),
-                    FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
-                    FOREIGN KEY (photo_id) REFERENCES photo (id) ON DELETE CASCADE
-                )",
-                [],
-            ).map_err(|e| e.to_string())?;
-        }
-        Err(e) => return Err(e.to_string()),
-    }
-
-    let mut libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr.clone(),
-        _ => vec![],
-    };
-    libraries.push(serde_json::json!({
-        "id": Uuid::new_v4().to_string(),
-        "name": name,
-        "icon": icon,
-        "color": color,
-        "path": path
-    }));
-    store.set("libraries", Value::Array(libraries));
-
-    store.save().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-fn update_library_path(
-    app: tauri::AppHandle,
-    library_id: String,
-    new_path: String,
-) -> Result<(), String> {
-    let store = get_store(&app)?;
-    let mut libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr.clone(),
-        _ => vec![],
-    };
-    for lib in libraries.iter_mut() {
-        if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
-            if let Some(obj) = lib.as_object_mut() {
-                obj.insert("path".to_string(), Value::String(new_path.clone()));
-            }
-        }
-    }
-    store.set("libraries", Value::Array(libraries));
-    store.save().map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-fn remove_library(app: tauri::AppHandle, library_id: String) -> Result<(), String> {
-    let store = get_store(&app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr.clone(),
-        _ => vec![],
-    };
-    let filtered: Vec<Value> = libraries
-        .into_iter()
-        .filter(|lib| lib.get("id").and_then(|v| v.as_str()) != Some(library_id.as_str()))
-        .collect();
-    store.set("libraries", Value::Array(filtered));
-    store.save().map_err(|e| e.to_string())?;
-    Ok(())
 }
 
 fn get_library_meta_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
