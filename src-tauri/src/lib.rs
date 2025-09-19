@@ -11,23 +11,10 @@ use uuid::Uuid;
 
 mod modules;
 use modules::config::{
-    get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library
+    get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library, set_selected_library
 };
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Photo {
-    pub id: String,
-    pub original_name: String,
-    pub file_type: String,
-    pub file_size: u64,
-    pub width: u32,
-    pub height: u32,
-    pub checksum: String,
-    pub is_favorite: bool,
-    pub is_screenshot: bool,
-    pub is_screen_recording: bool,
-    pub created_at: DateTime<Utc>,
-}
+use modules::library::add_photo;
+use modules::utils::Photo;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Album {
@@ -60,6 +47,7 @@ pub fn run() {
             update_library_path,
             remove_library,
             get_selected_library,
+            set_selected_library,
             get_photos,
             add_photo,
             delete_photo,
@@ -120,21 +108,6 @@ fn get_db_connection(app: &tauri::AppHandle, library_id: &str) -> Result<Connect
     let meta_path = get_library_meta_path(app, library_id)?;
     let db_path = meta_path.join("photos.db");
     Connection::open(db_path).map_err(|e| e.to_string())
-}
-
-fn map_extension_to_mime(ext: &str) -> &'static str {
-    match ext.to_lowercase().as_str() {
-        "jpg" | "jpeg" => "image/jpeg",
-        "png" => "image/png",
-        "gif" => "image/gif",
-        "bmp" => "image/bmp",
-        "webp" => "image/webp",
-        "heic" | "heif" => "image/heic",
-        "mp4" => "video/mp4",
-        "mov" => "video/quicktime",
-        "avi" => "video/x-msvideo",
-        _ => "application/octet-stream",
-    }
 }
 
 fn try_generate_thumbnail(original: &Path, out_path: &Path, max_size: u32) -> Result<(), String> {
@@ -209,95 +182,6 @@ fn get_photos(app: tauri::AppHandle, library_id: String) -> Result<Vec<Photo>, S
         photos.push(photo.map_err(|e| e.to_string())?);
     }
     Ok(photos)
-}
-
-#[tauri::command]
-fn add_photo(
-    app: tauri::AppHandle,
-    library_id: String,
-    source_path: String,
-) -> Result<Photo, String> {
-    let library_root = get_library_root_path(&app, &library_id)?;
-    fs::create_dir_all(&library_root).map_err(|e| e.to_string())?;
-
-    let source_path = Path::new(&source_path);
-    if !source_path.exists() {
-        return Err("Source file does not exist".to_string());
-    }
-
-    let original_name = source_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .ok_or("Invalid file name")?;
-
-    let file_extension = source_path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .unwrap_or("");
-
-    let file_type = map_extension_to_mime(file_extension);
-
-    let file_data = fs::read(source_path).map_err(|e| e.to_string())?;
-    let checksum = format!("{:x}", md5::compute(&file_data));
-    let file_size = file_data.len() as u64;
-
-    // Get image dimensions if it's a supported image format
-    let (width, height) = if ["jpg", "jpeg", "png", "bmp", "webp", "gif"].contains(&file_extension.to_lowercase().as_str()) {
-        match image::load_from_memory(&file_data) {
-            Ok(img) => img.dimensions(),
-            Err(_) => (0, 0),
-        }
-    } else {
-        (0, 0)
-    };
-
-    let photo_id = Uuid::new_v4().to_string();
-    let file_name = format!("{}.{}", photo_id, file_extension);
-    let originals_dir = library_root.join("originals");
-    fs::create_dir_all(&originals_dir).map_err(|e| e.to_string())?;
-    let dest_path = originals_dir.join(&file_name);
-
-    fs::copy(source_path, &dest_path).map_err(|e| e.to_string())?;
-
-    // Generate thumbnail into thumbnails directory
-    let thumbs_dir = library_root.join("thumbnails");
-    let thumb_path = thumbs_dir.join(format!("{}.webp", photo_id));
-    let _ = try_generate_thumbnail(&dest_path, &thumb_path, 512);
-
-    let now = Utc::now();
-    let photo = Photo {
-        id: photo_id.clone(),
-        original_name: original_name.to_string(),
-        file_type: file_type.to_string(),
-        file_size,
-        width,
-        height,
-        checksum,
-        is_favorite: false,
-        is_screenshot: false,
-        is_screen_recording: false,
-        created_at: now,
-    };
-
-    let conn = get_db_connection(&app, &library_id)?;
-    conn.execute(
-        "INSERT INTO photo (id, original_name, file_type, file_size, width, height, checksum, is_favorite, is_screenshot, is_screen_recording, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![
-            photo.id,
-            photo.original_name,
-            photo.file_type,
-            photo.file_size,
-            photo.width,
-            photo.height,
-            photo.checksum,
-            photo.is_favorite as i32,
-            photo.is_screenshot as i32,
-            photo.is_screen_recording as i32,
-            photo.created_at.to_rfc3339()
-        ],
-    ).map_err(|e| e.to_string())?;
-
-    Ok(photo)
 }
 
 #[tauri::command]

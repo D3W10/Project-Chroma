@@ -46,23 +46,23 @@ function RouteComponent() {
             <div className="w-full mb-12 space-y-6">
                 <animate.div className="w-full flex items-center gap-2" delay={3.8}>
                     <Phone48Filled />
-                    <div className="space-y-1">
+                    <div className="flex-1 space-y-1">
                         <h3 className="font-bold">Test 1</h3>
                         <p className="text-sm text-muted-foreground font-medium">Testing the subtitles</p>
                     </div>
                 </animate.div>
                 <animate.div className="w-full flex items-center gap-2" delay={4.1}>
                     <Phone48Filled />
-                    <div className="space-y-1">
+                    <div className="flex-1 space-y-1">
                         <h3 className="font-bold">Test 2</h3>
                         <p className="text-sm text-muted-foreground font-medium">Testing the subtitles</p>
                     </div>
                 </animate.div>
                 <animate.div className="w-full flex items-center gap-2" delay={4.4}>
                     <Phone48Filled />
-                    <div className="space-y-1">
-                        <h3 className="font-bold">Test 3</h3>
-                        <p className="text-sm text-muted-foreground font-medium">Testing the subtitles</p>
+                    <div className="flex-1 space-y-1">
+                        <h3 className="font-bold">Easy import from iPhone/iPad</h3>
+                        <p className="text-sm text-muted-foreground font-medium">Easily import the photos from your iPhone and iPad with full resolution and metadata</p>
                     </div>
                 </animate.div>
             </div>

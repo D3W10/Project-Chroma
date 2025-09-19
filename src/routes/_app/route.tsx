@@ -29,12 +29,15 @@ function RouteComponent() {
             updateLibraryPath(selectedLibrary.id, picked);
     }
 
+    function createNewLibrary() {
+    }
+
     return (
-        <main className="flex justify-center items-center flex-1" key={selectedLibrary?.id}>
+        <div className="flex justify-center items-center flex-1" key={selectedLibrary?.id}>
             {!!(selectedLibrary && !isLoading && libraryExists) && (
                 <Sidebar />
             )}
-            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isLoading && libraryExists ? "rounded-tl-xl" : ""} ring-1 ring-foreground/10 shadow-md overflow-hidden`}>
+            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isLoading && libraryExists ? "rounded-tl-xl" : ""} ring-1 ring-input shadow-md overflow-hidden`}>
                 {isLoading ? null : selectedLibrary && libraryExists ? (
                     <Outlet />
                 ) : selectedLibrary ? (
@@ -45,7 +48,7 @@ function RouteComponent() {
                         <animate.h1 className="text-xl font-bold" delay={0.8}>Library not found</animate.h1>
                         <animate.div className="space-y-2" delay={1.1}>
                             <p>We couldn&apos;t find <span className="font-semibold">{selectedLibrary.name}</span> at the following location:</p>
-                            <div className="w-full px-3 py-2 bg-secondary rounded-lg font-mono text-sm ring-1 ring-foreground/10 overflow-x-auto">
+                            <div className="w-full px-3 py-2 bg-secondary rounded-lg font-mono text-sm ring-1 ring-input overflow-x-auto">
                                 {selectedLibrary.path}
                             </div>
                         </animate.div>
@@ -70,11 +73,11 @@ function RouteComponent() {
                         <animate.h1 className="text-xl font-bold" delay={0.8}>No library selected</animate.h1>
                         <animate.p delay={1.1} className="text-muted-foreground">Use the select on the top left to open an existing library or create a new one using the button below.</animate.p>
                         <animate.div className="w-full mt-2 flex justify-center" delay={1.4}>
-                            <Button variant="outline">Create new library</Button>
+                            <Button variant="outline" onClick={createNewLibrary}>Create new library</Button>
                         </animate.div>
                     </CenterLayout>
                 )}
             </div>
-        </main>
+        </div>
     );
 }

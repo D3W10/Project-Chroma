@@ -29,12 +29,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                     <div className="w-24"></div>
                     <Popover open={open} onOpenChange={setOpen}>
                         <PopoverTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                role="combobox"
-                                aria-expanded={open}
-                                className="w-50 py-1.5 justify-between"
-                            >
+                            <Button variant="ghost" className="w-50 py-1.5 justify-between" role="combobox" aria-expanded={open}>
                                 <div className={"h-full flex items-center gap-2 " + (!selectedLibrary ? "text-muted-foreground" : "")}>
                                     <div className="size-6 flex justify-center items-center ring-2 rounded-sm aspect-square" style={{ backgroundColor: `color-mix(in oklch, ${selectedLibrary ? selectedLibrary.color : "var(--color-slate-200)"}, transparent 60%)`, "--tw-ring-color": `color-mix(in oklch, ${selectedLibrary ? selectedLibrary.color : "var(--color-slate-200)"}, transparent 40%)` } as CSSProperties}>
                                         <span className="text-sm drop-shadow-sm">{selectedLibrary ? selectedLibrary.icon : "📁"}</span>

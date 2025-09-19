@@ -1,6 +1,6 @@
 import { useLocation, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Album24Filled, Album24Regular, Image24Filled, Image24Regular } from "@fluentui/react-icons";
+import { Album24Filled, Album24Regular, Heart24Filled, Heart24Regular, Image24Filled, Image24Regular } from "@fluentui/react-icons";
 
 export function Sidebar() {
     const location = useLocation();
@@ -8,6 +8,7 @@ export function Sidebar() {
     const navItems = [
         { path: "/", label: "Photos", icon: Image24Regular, iconSelected: Image24Filled },
         { path: "/albums", label: "Albums", icon: Album24Regular, iconSelected: Album24Filled },
+        { path: "/favorites", label: "Favorites", icon: Heart24Regular, iconSelected: Heart24Filled },
     ];
 
     return (
@@ -22,8 +23,8 @@ export function Sidebar() {
                             variant={isActive ? "outline" : "ghost"}
                             className="w-full h-auto py-3 flex-col gap-1"
                         >
-                            <Icon className={`size-7 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
-                            <span className="text-sm">{item.label}</span>
+                            <Icon className={"size-7 " + (isActive ? "text-primary" : "text-muted-foreground")} />
+                            <span className={"text-sm " + (isActive ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
                         </Button>
                     </Link>
                 );

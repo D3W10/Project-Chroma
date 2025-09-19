@@ -17,3 +17,11 @@ export function updateLibraryPath(libraryId: string, newPath: string) {
 export function removeLibrary(libraryId: string) {
     return tryCatch(() => invoke("remove_library", { libraryId }));
 }
+
+export function getSelectedLibrary() {
+    return tryCatch(() => invoke<string | null>("get_selected_library"));
+}
+
+export function setSelectedLibrary(libraryId: string | null) {
+    return tryCatch(() => invoke("set_selected_library", { libraryId }));
+}

@@ -82,3 +82,25 @@ pub fn remove_library(app: tauri::AppHandle, library_id: String) -> Result<(), S
     save_store(store)?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn get_selected_library(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let store = get_store(&app)?;
+    if let Some(v) = store.get("selected_library") {
+        Ok(v.clone().as_str().map(|s| s.to_string()))
+    } else {
+        Ok(None)
+    }
+}
+
+#[tauri::command]
+pub fn set_selected_library(app: tauri::AppHandle, library_id: Option<String>) -> Result<(), String> {
+    let store = get_store(&app)?;
+    if let Some(id) = library_id {
+        store.set("selected_library", Value::String(id));
+    } else {
+        store.set("selected_library", Value::Null);
+    }
+    save_store(store)?;
+    Ok(())
+}

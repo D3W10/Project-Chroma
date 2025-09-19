@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "tw-animate-css";
 
 @custom-variant dark (&:where(:not(.light *)));
 
@@ -39,6 +38,8 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-stunning-blue: oklch(0.7486 0.1719 209.03);
 }
 
 :root {
@@ -49,40 +50,30 @@
     --card-foreground: var(--color-foreground);
     --popover: var(--color-background);
     --popover-foreground: var(--color-foreground);
-    --primary: oklch(0.7486 0.1719 209.03);
+    --primary: var(--color-stunning-blue);
     --primary-foreground: var(--color-background);
     --secondary: var(--color-black);
     --muted: var(--color-slate-950);
     --muted-foreground: var(--color-slate-400);
     --accent: var(--color-slate-900);
     --accent-foreground: var(--color-foreground);
-    --destructive: var(--color-red-700);
+    --destructive: var(--color-red-600);
+    --input: color-mix(in oklch, var(--color-slate-100), transparent 80%);
 }
 
 .light {
     --background: var(--color-white);
     --foreground: var(--color-slate-950);
-    --card: var(--color-white);
-    --card-foreground: var(--color-slate-950);
-    --popover: var(--color-white);
-    --popover-foreground: var(--color-slate-950);
-    --primary: oklch(0.7486 0.1719 209.03);
-    --primary-foreground: oklch(0.984 0.003 247.858);
     --secondary: var(--color-slate-100);
     --secondary-foreground: oklch(0.208 0.042 265.755);
     --muted: var(--color-slate-100);
-    --muted-foreground: oklch(0.554 0.046 257.417);
+    --muted-foreground: var(--color-slate-600);
     --accent: var(--color-slate-100);
     --accent-foreground: oklch(0.208 0.042 265.755);
     --destructive: var(--color-red-500);
     --border: oklch(0.929 0.013 255.508);
     --input: oklch(0.929 0.013 255.508);
     --ring: oklch(0.704 0.04 256.788);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
     --sidebar: oklch(0.984 0.003 247.858);
     --sidebar-foreground: oklch(0.129 0.042 264.695);
     --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -93,47 +84,13 @@
     --sidebar-ring: oklch(0.704 0.04 256.788);
 }
 
-.dark {
-    --background: oklch(0.129 0.042 264.695);
-    --foreground: oklch(0.984 0.003 247.858);
-    --card: oklch(0.208 0.042 265.755);
-    --card-foreground: oklch(0.984 0.003 247.858);
-    --popover: oklch(0.208 0.042 265.755);
-    --popover-foreground: oklch(0.984 0.003 247.858);
-    --primary: oklch(0.68 0.15 237);
-    --primary-foreground: oklch(0.208 0.042 265.755);
-    --secondary: oklch(0.279 0.041 260.031);
-    --secondary-foreground: oklch(0.984 0.003 247.858);
-    --muted: oklch(0.279 0.041 260.031);
-    --muted-foreground: oklch(0.704 0.04 256.788);
-    --accent: oklch(0.279 0.041 260.031);
-    --accent-foreground: oklch(0.984 0.003 247.858);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.551 0.027 264.364);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.208 0.042 265.755);
-    --sidebar-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-accent: oklch(0.279 0.041 260.031);
-    --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.551 0.027 264.364);
-}
-
 @layer base {
     * {
         @apply border-border outline-ring/50;
     }
 
     body {
-        @apply bg-secondary text-foreground overflow-hidden;
+        @apply bg-slate-100 dark:bg-black text-foreground overflow-hidden;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
