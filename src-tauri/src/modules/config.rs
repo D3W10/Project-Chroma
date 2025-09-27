@@ -48,6 +48,88 @@ pub fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<b
     log::error!("Library {} not found", library_id);
     Err("Library not found".to_string())
 }
+
+#[tauri::command]
+pub fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, path: &str) -> Result<(), String> {
+    let base = Path::new(path);
+    let full_path = base.to_path_buf();
+    let store = get_store(&app)?;
+
+    match fs::create_dir_all(&full_path) {
+        Ok(_) => println!("Library created successfully"),
+        Err(e) => println!("Error creating library: {}", e),
+    }
+
+    let conn = Connection::open(full_path.join("photos.db").to_str().unwrap());
+
+    match conn {
+        Ok(conn) => {
+            let _ = fs::create_dir_all(full_path.join("originals"));
+            let _ = fs::create_dir_all(full_path.join("thumbnails"));
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS photo (
+                    id TEXT PRIMARY KEY,
+                    original_name TEXT NOT NULL,
+                    file_type TEXT NOT NULL,
+                    file_size INTEGER NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
+                    checksum TEXT NOT NULL,
+                    is_favorite INTEGER DEFAULT 0,
+                    is_screenshot INTEGER DEFAULT 0,
+                    is_screen_recording INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL
+                )",
+                [],
+            ).map_err(|e| e.to_string())?;
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS album (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    cover_photo_type TEXT,
+                    cover_photo_id TEXT,
+                    cover_photo_icon TEXT,
+                    cover_photo_color TEXT,
+                    created_at TEXT NOT NULL
+                )",
+                [],
+            ).map_err(|e| e.to_string())?;
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS album_photo (
+                    album_id TEXT NOT NULL,
+                    photo_id TEXT NOT NULL,
+                    added_at TEXT NOT NULL,
+                    PRIMARY KEY (album_id, photo_id),
+                    FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
+                    FOREIGN KEY (photo_id) REFERENCES photo (id) ON DELETE CASCADE
+                )",
+                [],
+            ).map_err(|e| e.to_string())?;
+        }
+        Err(e) => return Err(e.to_string()),
+    }
+
+    let mut libraries = match store.get("libraries") {
+        Some(Value::Array(arr)) => arr.clone(),
+        _ => vec![],
+    };
+    libraries.push(serde_json::json!({
+        "id": Uuid::new_v4().to_string(),
+        "name": name,
+        "icon": icon,
+        "color": color,
+        "path": path
+    }));
+    store.set("libraries", Value::Array(libraries));
+
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn update_library_path(app: tauri::AppHandle, library_id: String, new_path: String) -> Result<(), String> {
     let store = get_store(&app)?;

@@ -28,13 +28,13 @@ function RootComponent() {
     });
 
     useEffect(() => {
-        setLibraries(data ?? []);
+        setLibraries(data?.data ?? []);
     }, [data]);
 
     useEffect(() => {
         if (!data) return;
 
-        setLib(data.find(e => e.id === dataSel) ?? null);
+        setLib(data?.data?.find(e => e.id === dataSel?.data) ?? null);
     }, [data, dataSel]);
 
     useEffect(() => {

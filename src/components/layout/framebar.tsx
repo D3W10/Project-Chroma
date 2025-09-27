@@ -26,7 +26,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
         <div className="w-full h-12 flex items-center" data-tauri-drag-region>
             {libraries.length > 0 && !location.pathname.startsWith("/onboarding") && (
                 <>
-                    <div className="w-24"></div>
+                    <div className="w-26"></div>
                     <Popover open={open} onOpenChange={setOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="ghost" className="w-50 py-1.5 justify-between" role="combobox" aria-expanded={open}>

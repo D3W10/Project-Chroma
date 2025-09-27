@@ -1,6 +1,4 @@
 use chrono::{DateTime, Utc};
-use image::imageops::FilterType;
-use image::{GenericImageView, ImageFormat};
 use rusqlite::{params, Connection};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -10,10 +8,8 @@ use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
 mod modules;
-use modules::config::{
-    get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library, set_selected_library
-};
-use modules::library::add_photo;
+use modules::config::{get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library, set_selected_library};
+use modules::library::{get_photos, add_photo};
 use modules::utils::Photo;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -67,25 +63,6 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 
-fn get_library_meta_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
-    let store = get_store(app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr,
-        _ => return Err("No libraries found".to_string()),
-    };
-
-    for lib in libraries {
-        if let Some(id) = lib.get("id").and_then(|v| v.as_str()) {
-            if id == library_id {
-                if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
-                    return Ok(Path::new(path).to_path_buf());
-                }
-            }
-        }
-    }
-    Err("Library not found".to_string())
-}
-
 fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
     let store = get_store(app)?;
     let libraries = match store.get("libraries") {
@@ -105,83 +82,9 @@ fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<Pat
 }
 
 fn get_db_connection(app: &tauri::AppHandle, library_id: &str) -> Result<Connection, String> {
-    let meta_path = get_library_meta_path(app, library_id)?;
+    let meta_path = get_library_root_path(app, library_id)?;
     let db_path = meta_path.join("photos.db");
     Connection::open(db_path).map_err(|e| e.to_string())
-}
-
-fn try_generate_thumbnail(original: &Path, out_path: &Path, max_size: u32) -> Result<(), String> {
-    // Only attempt for common still image formats we can decode
-    let ext = original
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("")
-        .to_lowercase();
-    let supported = ["jpg", "jpeg", "png", "bmp", "webp", "gif"]; // image crate supports static gif first frame
-    if !supported.contains(&ext.as_str()) {
-        return Ok(()); // skip silently for unsupported formats like HEIC/VIDEO
-    }
-
-    let data = fs::read(original).map_err(|e| e.to_string())?;
-    let img = image::load_from_memory(&data).map_err(|e| e.to_string())?;
-    let (w, h) = img.dimensions();
-    let ratio = (w as f32) / (h as f32);
-    let (tw, th) = if w >= h {
-        (max_size, (max_size as f32 / ratio).round() as u32)
-    } else {
-        ((max_size as f32 * ratio).round() as u32, max_size)
-    };
-    let resized = img.resize_exact(tw, th, FilterType::CatmullRom);
-
-    if let Some(parent) = out_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    // Save as webp for efficiency
-    let mut buf = Vec::new();
-    resized
-        .write_to(&mut std::io::Cursor::new(&mut buf), ImageFormat::WebP)
-        .map_err(|e| e.to_string())?;
-    fs::write(out_path, &buf).map_err(|e| e.to_string())?;
-    Ok(())
-}
-
-#[tauri::command]
-fn get_photos(app: tauri::AppHandle, library_id: String) -> Result<Vec<Photo>, String> {
-    let conn = get_db_connection(&app, &library_id)?;
-    let mut stmt = conn
-        .prepare("SELECT * FROM photo ORDER BY created_at DESC")
-        .map_err(|e| e.to_string())?;
-    let photo_iter = stmt
-        .query_map([], |row| {
-            Ok(Photo {
-                id: row.get(0)?,
-                original_name: row.get(1)?,
-                file_type: row.get(2)?,
-                file_size: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                checksum: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_screenshot: row.get::<_, i32>(8)? != 0,
-                is_screen_recording: row.get::<_, i32>(9)? != 0,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
-                    .map_err(|_e| {
-                        rusqlite::Error::InvalidColumnType(
-                            10,
-                            "created_at".to_string(),
-                            rusqlite::types::Type::Text,
-                        )
-                    })?
-                    .with_timezone(&Utc),
-            })
-        })
-        .map_err(|e| e.to_string())?;
-
-    let mut photos = Vec::new();
-    for photo in photo_iter {
-        photos.push(photo.map_err(|e| e.to_string())?);
-    }
-    Ok(photos)
 }
 
 #[tauri::command]

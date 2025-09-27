@@ -16,7 +16,7 @@ function createAnimatedComponent(element: keyof typeof motion) {
                 className={className}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: QUICK_EASE, delay: delay ?? 0.5 }}
+                transition={{ duration: 0.6, ease: QUICK_EASE, delay: delay ?? 0.2 }}
                 {...props}
             >
                 {children}
