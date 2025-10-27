@@ -97,7 +97,7 @@ function RouteComponent() {
     }
 
     function unselectAll(event: React.MouseEvent<HTMLElement, MouseEvent>) {
-        if (event.target === event.currentTarget || (event.target instanceof HTMLElement && (event.target.id === "photoGrid" || (!squareThumb && event.target.tagName === "DIV" && event.target.parentElement?.parentElement?.id === "photoGrid")))) {
+        if (event.target === event.currentTarget || (event.target instanceof HTMLElement && (event.target.id === "photoGrid" || event.target.id === "toolHeader" || (!squareThumb && event.target.tagName === "DIV" && event.target.parentElement?.parentElement?.id === "photoGrid")))) {
             setSelected([]);
             setLastIndex(-1);
         }
@@ -109,7 +109,7 @@ function RouteComponent() {
 
     return (
         <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
-            <div className="p-2 flex justify-between items-center sticky top-0 left-0 right-0 z-10 before:absolute before:inset-0 before:backdrop-blur-xs before:mask-b-from-25% before:-z-10 after:absolute after:inset-0 after:bg-background/70 after:mask-b-from-40% after:-z-20">
+            <div id="toolHeader" className="p-2 flex justify-between items-center sticky top-0 left-0 right-0 z-10 before:absolute before:inset-0 before:backdrop-blur-xs before:mask-b-from-25% before:-z-10 after:absolute after:inset-0 after:bg-background/70 after:mask-b-from-40% after:-z-20">
                 <div>
                     <Button onClick={() => setOpenAddPhotos(true)}>
                         <Add24Filled className="size-4 mr-0.5" />
@@ -188,7 +188,7 @@ function RouteComponent() {
             </div>
             <div id="photoGrid" className={`w-full min-h-0 p-2 pt-14 ${photos.length > 0 ? "grid gap-1" : "h-full flex justify-center items-center"} ${gridSizes[gridSize]} absolute`}>
                 {photos.length > 0 ? photos.map((p, i) => (
-                    <PhotoItem photo={p} square={squareThumb} selected={selected.includes(p.id)} onClick={e => handleSelect(e, i, p.id)} onContextMenu={() => handleRightClick(i, p.id)} key={p.id} />
+                    <PhotoItem photo={p} square={squareThumb} selected={selected.includes(p.id)} selectedAmount={selected.length} onClick={e => handleSelect(e, i, p.id)} onContextMenu={() => handleRightClick(i, p.id)} key={p.id} />
                 )) : <GridEmpty onAdd={() => setOpenAddPhotos(true)} />}
             </div>
         </div>
@@ -210,7 +210,7 @@ function GridEmpty({ onAdd }: { onAdd: () => unknown }) {
     );
 }
 
-function PhotoItem({ photo, selected, square, onClick, onContextMenu }: { photo: Photo; selected: boolean; square: boolean; onClick?: React.MouseEventHandler<HTMLElement>; onContextMenu?: React.MouseEventHandler<HTMLElement> }) {
+function PhotoItem({ photo, selected, square, selectedAmount, onClick, onContextMenu }: { photo: Photo; selected: boolean; square: boolean; selectedAmount: number; onClick?: React.MouseEventHandler<HTMLElement>; onContextMenu?: React.MouseEventHandler<HTMLElement> }) {
     const [error, setError] = useState(false);
     const { selectedLibrary } = useLibrary();
 
@@ -229,7 +229,7 @@ function PhotoItem({ photo, selected, square, onClick, onContextMenu }: { photo:
                             onError={() => setError(true)}
                         />
                     ) : (
-                        <div className={`size-full flex flex-col justify-center items-center gap-1 bg-secondary/75 rounded-sm  ${selected && !square ? "outline-3 outline-primary outline-offset-3" : ""} transition-[outline]`} onClick={onClick} onContextMenu={onContextMenu}>
+                        <div className={`size-full flex flex-col justify-center items-center gap-1 bg-muted rounded-sm ${selected && !square ? "outline-3 outline-primary outline-offset-3" : ""} transition-[outline]`} onClick={onClick} onContextMenu={onContextMenu}>
                             <p className="text-2xl">📸</p>
                             <p className="text-xs text-muted-foreground font-medium">{photo.original_name}</p>
                         </div>
@@ -254,10 +254,12 @@ function PhotoItem({ photo, selected, square, onClick, onContextMenu }: { photo:
                 <ContextMenuItem>
                     <EyeOff24Regular className="size-4.5" />
                     Hide
+                    {selectedAmount > 1 && ` ${selectedAmount} items`}
                 </ContextMenuItem>
                 <ContextMenuItem>
                     <Delete24Regular className="size-4.5" />
                     Delete
+                    {selectedAmount > 1 && ` ${selectedAmount} items`}
                 </ContextMenuItem>
             </ContextMenuContent>
         </ContextMenu>

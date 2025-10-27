@@ -81,7 +81,6 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                 )}
             </div>
             <div className="flex items-center gap-1">
-                <button className="mr-20" onClick={() => document.body.classList.toggle("light")}>Light</button>
                 <Popover open={isOpen} onOpenChange={setIsOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" className={`text-muted-foreground ${peekNotification ? "w-auto px-3" : ""}`}>
