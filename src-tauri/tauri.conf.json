@@ -1,6 +1,6 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "project-chroma",
+    "productName": "Project Chroma",
     "version": "0.1.0",
     "identifier": "com.d3w10.project-chroma",
     "build": {

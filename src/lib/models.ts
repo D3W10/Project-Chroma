@@ -19,3 +19,15 @@ export interface Photo {
     is_screen_recording: boolean;
     created_at: string;
 }
+
+export interface Notification {
+    id: string;
+    title: string;
+    description?: string;
+    type: NotificationType;
+    peek?: string;
+    timestamp: Date;
+    progress?: number;
+}
+
+export type NotificationType = "info" | "success" | "error" | "warning" | "promise";

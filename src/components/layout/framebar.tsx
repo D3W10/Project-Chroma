@@ -1,17 +1,21 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { useLocation } from "@tanstack/react-router";
-import { ChevronUpDown16Regular } from "@fluentui/react-icons";
+import { ChevronUpDown16Regular, Settings24Regular, TextBulletListSquare24Regular } from "@fluentui/react-icons";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/custom/Spinner";
 import { useLibrary } from "@/lib/useLibrary";
-import type { Library } from "@/lib/models";
+import { useNotifications } from "@/lib/useNotifications";
+import { NotificationCenter } from "@/components/custom/NotificationCenter";
+import type { Library, Notification } from "@/lib/models";
 
 export function Framebar({ libraries }: { libraries: Library[] }) {
-    const [open, setOpen] = useState(false);
-    const [createLibraryOpen, setCreateLibraryOpen] = useState(false);
-    const { selectedLibrary, setSelectedLibrary } = useLibrary();
+    const [isLibraryPanelOpen, setIsLibraryPanelOpen] = useState(false);
+    const [peekNotification, setPeekNotification] = useState<Notification | null>(null);
+    const { selectedLibrary, setSelectedLibrary, setOpenCreateLibrary } = useLibrary();
+    const { notifications, isOpen, setIsOpen } = useNotifications();
     const location = useLocation();
 
     const handleLibrarySelect = (libraryId: string) => {
@@ -19,24 +23,36 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
         if (newLibrary && newLibrary.id !== selectedLibrary?.id)
             setSelectedLibrary(newLibrary);
 
-        setOpen(false);
+        setIsLibraryPanelOpen(false);
     };
 
+    function handleCreateLibrary() {
+        setIsLibraryPanelOpen(false);
+        setOpenCreateLibrary(true);
+    }
+
+    useEffect(() => {
+        setPeekNotification(notifications.find(n => n.type === "promise") || null);
+    }, [notifications]);
+
+    useEffect(() => {
+        toast.dismiss();
+    }, [isOpen]);
+
     return (
-        <div className="w-full h-12 flex items-center" data-tauri-drag-region>
-            {libraries.length > 0 && !location.pathname.startsWith("/onboarding") && (
-                <>
-                    <div className="w-26"></div>
-                    <Popover open={open} onOpenChange={setOpen}>
+        <div className="w-full h-12 min-h-12 pl-26 pr-1.5 flex justify-between items-center" data-tauri-drag-region>
+            <div className="flex items-center">
+                {libraries.length > 0 && !location.pathname.startsWith("/onboarding") && (
+                    <Popover open={isLibraryPanelOpen} onOpenChange={setIsLibraryPanelOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" className="w-50 py-1.5 justify-between" role="combobox" aria-expanded={open}>
+                            <Button variant="ghost" className="w-50 py-1.5 justify-between" role="combobox" aria-expanded={isLibraryPanelOpen}>
                                 <div className={"h-full flex items-center gap-2 " + (!selectedLibrary ? "text-muted-foreground" : "")}>
-                                    <div className="size-6 flex justify-center items-center ring-2 rounded-sm aspect-square" style={{ backgroundColor: `color-mix(in oklch, ${selectedLibrary ? selectedLibrary.color : "var(--color-slate-200)"}, transparent 60%)`, "--tw-ring-color": `color-mix(in oklch, ${selectedLibrary ? selectedLibrary.color : "var(--color-slate-200)"}, transparent 40%)` } as CSSProperties}>
+                                    <div className="size-6 flex justify-center items-center bg-(--lib-color)/50 ring-2 ring-(--lib-color) rounded-sm aspect-square" style={{ "--lib-color": `var(--color-${selectedLibrary ? selectedLibrary.color : "slate-500"})` } as CSSProperties}>
                                         <span className="text-sm drop-shadow-sm">{selectedLibrary ? selectedLibrary.icon : "📁"}</span>
                                     </div>
                                     {selectedLibrary ? selectedLibrary.name : "Select library..."}
                                 </div>
-                                <ChevronUpDown16Regular className="opacity-50" />
+                                <ChevronUpDown16Regular className="text-muted-foreground" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-50 p-0">
@@ -45,7 +61,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                                     <CommandGroup>
                                         {libraries.map(lib => (
                                             <CommandItem key={lib.id} value={lib.id} onSelect={handleLibrarySelect}>
-                                                <div className="size-6 flex justify-center items-center ring-2 rounded-sm aspect-square" style={{ backgroundColor: `color-mix(in oklch, ${lib.color}, transparent 60%)`, "--tw-ring-color": `color-mix(in oklch, ${lib.color}, transparent 40%)` } as CSSProperties}>
+                                                <div className="size-6 flex justify-center items-center bg-(--lib-color)/50 ring-2 ring-(--lib-color) rounded-sm aspect-square" style={{ "--lib-color": `var(--color-${lib.color})` } as CSSProperties}>
                                                     <span className="text-sm drop-shadow-sm">{lib.icon}</span>
                                                 </div>
                                                 {lib.name}
@@ -54,27 +70,39 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                                     </CommandGroup>
                                     <CommandSeparator />
                                     <CommandGroup>
-                                        <CommandItem value="Create new library" onSelect={() => setCreateLibraryOpen(true)}>
+                                        <CommandItem value="Create new library" onSelect={handleCreateLibrary}>
                                             Create new library
                                         </CommandItem>
-                                        <Dialog open={createLibraryOpen} onOpenChange={setCreateLibraryOpen}>
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Are you absolutely sure?</DialogTitle>
-                                                    <DialogDescription>
-                                                        This action cannot be undone. This will permanently delete your account
-                                                        and remove your data from our servers.
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                            </DialogContent>
-                                        </Dialog>
                                     </CommandGroup>
                                 </CommandList>
                             </Command>
                         </PopoverContent>
                     </Popover>
-                </>
-            )}
+                )}
+            </div>
+            <div className="flex items-center gap-1">
+                <button className="mr-20" onClick={() => document.body.classList.toggle("light")}>Light</button>
+                <Popover open={isOpen} onOpenChange={setIsOpen}>
+                    <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className={`text-muted-foreground ${peekNotification ? "w-auto px-3" : ""}`}>
+                            {peekNotification ? (
+                                <>
+                                    <Spinner />
+                                    {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
+                                </>
+                            ) : (
+                                <TextBulletListSquare24Regular className="size-5" />
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" sideOffset={12} className="w-80 p-0">
+                        <NotificationCenter />
+                    </PopoverContent>
+                </Popover>
+                <Button variant="ghost" size="icon" className="text-muted-foreground">
+                    <Settings24Regular className="size-5" />
+                </Button>
+            </div>
         </div>
     );
 }

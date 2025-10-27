@@ -71,7 +71,7 @@ pub fn get_photos(app: tauri::AppHandle, library_id: String) -> Result<Vec<utils
 }
 
 #[tauri::command]
-pub fn add_photo(app: tauri::AppHandle, library_id: String, source_path: String) -> Result<utils::Photo, String> {
+pub async fn add_photo(app: tauri::AppHandle, library_id: String, source_path: String) -> Result<utils::Photo, String> {
     let library_root = get_library_root_path(&app, &library_id)?;
 
     let source_path = Path::new(&source_path);

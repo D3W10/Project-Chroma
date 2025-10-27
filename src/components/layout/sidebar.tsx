@@ -1,8 +1,8 @@
 import { useLocation, Link } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
 import { Album24Filled, Album24Regular, Heart24Filled, Heart24Regular, Image24Filled, Image24Regular } from "@fluentui/react-icons";
+import { Button } from "@/components/ui/button";
 
-export function Sidebar() {
+export function Sidebar({ collapsed }: { collapsed: boolean }) {
     const location = useLocation();
 
     const navItems = [
@@ -12,17 +12,14 @@ export function Sidebar() {
     ];
 
     return (
-        <nav className="w-28 h-full px-2 space-y-2">
+        <nav className={`w-28 h-full ${collapsed ? "-ml-28" : ""} px-2 space-y-2 transition-[margin] duration-200`}>
             {navItems.map(item => {
                 const isActive = location.pathname === item.path;
                 const Icon = !isActive ? item.icon : item.iconSelected;
 
                 return (
                     <Link key={item.path} to={item.path}>
-                        <Button
-                            variant={isActive ? "outline" : "ghost"}
-                            className="w-full h-auto py-3 flex-col gap-1"
-                        >
+                        <Button variant={isActive ? "outline" : "ghost"} className="w-full h-auto py-3 flex-col gap-1">
                             <Icon className={"size-7 " + (isActive ? "text-primary" : "text-muted-foreground")} />
                             <span className={"text-sm " + (isActive ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
                         </Button>

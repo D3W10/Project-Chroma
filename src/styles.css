@@ -1,6 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-@custom-variant dark (&:where(:not(.light *)));
+@custom-variant dark (&:where(:not(.light)));
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -41,31 +42,40 @@
     --primary-foreground: var(--color-background);
     --secondary: var(--color-slate-900);
     --secondary-foreground: var(--color-foreground);
+    --muted: var(--color-slate-900);
     --muted-foreground: var(--color-slate-400);
     --accent: var(--color-slate-900);
     --accent-foreground: var(--color-foreground);
     --destructive: var(--color-red-700);
-    --input: color-mix(in oklch, var(--color-slate-100) 15%, transparent);
+    --border: color-mix(in oklch, var(--color-foreground) 20%, transparent);
+    --input: color-mix(in oklch, var(--color-foreground) 15%, transparent);
+    --ring: var(--color-border);
 }
 
 .light {
     --background: var(--color-white);
     --foreground: var(--color-slate-950);
+    --card: var(--color-background);
+    --card-foreground: var(--color-foreground);
+    --popover: var(--color-background);
+    --popover-foreground: var(--color-foreground);
+    --primary: var(--color-stunning-blue);
+    --primary-foreground: var(--color-background);
     --secondary: var(--color-slate-100);
-    --secondary-foreground: oklch(0.208 0.042 265.755);
+    --secondary-foreground: var(--color-foreground);
     --muted: var(--color-slate-100);
     --muted-foreground: var(--color-slate-600);
     --accent: var(--color-slate-100);
-    --accent-foreground: oklch(0.208 0.042 265.755);
+    --accent-foreground: var(--color-foreground);
     --destructive: var(--color-red-500);
-    --border: oklch(0.929 0.013 255.508);
-    --input: color-mix(in oklch, var(--color-slate-900) 15%, transparent);
-    --ring: oklch(0.704 0.04 256.788);
+    --border: color-mix(in oklch, var(--color-foreground) 80%, transparent);
+    --input: color-mix(in oklch, var(--color-foreground) 15%, transparent);
+    --ring: var(--color-border);
 }
 
 @layer base {
     * {
-        @apply border-border outline-ring/50;
+        @apply select-none;
     }
 
     body {
@@ -83,8 +93,12 @@
     }
 }
 
-[data-sonner-toast][data-styled=true] [data-title] {
-    @apply font-bold;
+::-webkit-scrollbar {
+    @apply w-1 h-1;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-foreground/15;
 }
 
 html:active-view-transition-type(slide-left) {
@@ -94,6 +108,44 @@ html:active-view-transition-type(slide-left) {
     &::view-transition-new(onboarding-content) {
         animation: 300ms cubic-bezier(0.22, 1, 0.36, 1) slide-in-left;
     }
+}
+
+[data-sonner-toast][data-styled=true] {
+    @apply h-auto p-3 flex items-start;
+}
+
+[data-sonner-toast][data-styled=true] [data-icon] {
+    @apply size-5 m-0;
+}
+
+[data-sonner-toast][data-styled=true] [data-content] {
+    @apply flex-1 gap-1;
+}
+
+[data-sonner-toast][data-styled=true] [data-title] {
+    @apply text-sm font-medium;
+}
+
+[data-sonner-toast][data-styled=true] [data-description] {
+    @apply text-xs text-muted-foreground line-clamp-2;
+}
+
+[data-sonner-toast][data-styled=true] [data-close-button] {
+    @apply size-3 top-3 left-auto right-3 text-muted-foreground! bg-transparent! border-0! rounded-none! transform-none! transition;
+}
+
+[data-sonner-toast][data-styled=true] [data-close-button]:hover {
+    @apply text-foreground! bg-transparent!;
+}
+
+[data-sonner-toast][data-expanded=false] {
+    @apply [--lift-amount:10px]!;
+}
+
+[data-sonner-toaster][data-sonner-theme=light], [data-sonner-toaster][data-sonner-theme=dark] {
+    --normal-bg: var(--color-popover);
+    --normal-border: var(--color-border);
+    --normal-text: var(--color-foreground);
 }
 
 @keyframes slide-out-left {

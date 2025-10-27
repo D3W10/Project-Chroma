@@ -1,11 +1,12 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorCircle24Regular, ImageMultiple24Regular } from "@fluentui/react-icons";
 import { animate } from "@/components/animated";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";
+import { IconBox } from "@/components/custom/IconBox";
 import { checkLibraryPath, removeLibrary, updateLibraryPath } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 
@@ -14,7 +15,8 @@ export const Route = createFileRoute("/_app")({
 });
 
 function RouteComponent() {
-    const { selectedLibrary } = useLibrary();
+    const { libraries, selectedLibrary, setOpenCreateLibrary, setPendingLibraryId } = useLibrary();
+    const queryClient = useQueryClient();
 
     const { data: libraryExists, error, isLoading } = useQuery({
         queryKey: ["library-path", selectedLibrary?.id],
@@ -30,49 +32,60 @@ function RouteComponent() {
     }
 
     function createNewLibrary() {
+        setOpenCreateLibrary(true);
+    }
+
+    async function handleRemoveLibrary() {
+        if (selectedLibrary) {
+            const idx = libraries.findIndex(lib => lib.id === selectedLibrary.id);
+            const rest = libraries.filter(lib => lib.id !== selectedLibrary.id);
+
+            await removeLibrary(selectedLibrary.id);
+
+            setPendingLibraryId(rest.length >= idx + 1 ? rest[idx].id : (rest.length > 0 ? rest[idx - 1].id : null));
+            queryClient.invalidateQueries({ queryKey: ["libraries"] });
+        }
     }
 
     return (
-        <div className="flex justify-center items-center flex-1" key={selectedLibrary?.id}>
-            {!!(selectedLibrary && !isLoading && libraryExists?.data) && (
-                <Sidebar />
-            )}
-            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isLoading && libraryExists?.data ? "rounded-tl-xl" : ""} ring-1 ring-input shadow-md overflow-hidden`}>
+        <div className="flex justify-center items-center flex-1">
+            <Sidebar collapsed={!(selectedLibrary && !isLoading && libraryExists?.data)} />
+            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isLoading && libraryExists?.data ? "rounded-tl-xl" : ""} ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200`}>
                 {isLoading ? null : selectedLibrary && libraryExists?.data ? (
-                    <Outlet />
+                    <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
-                    <CenterLayout>
-                        <animate.div delay={0.2} className="size-18 mb-4 p-4 bg-primary/15 rounded-lg ring-2 ring-primary">
-                            <ErrorCircle24Regular className="size-full drop-shadow-md drop-shadow-primary/50" />
-                        </animate.div>
-                        <animate.h1 className="text-xl font-bold" delay={0.35}>Library not found</animate.h1>
-                        <animate.div className="space-y-2" delay={0.5}>
+                    <CenterLayout key={selectedLibrary.id}>
+                        <IconBox className="mb-4">
+                            <ErrorCircle24Regular />
+                        </IconBox>
+                        <animate.h1 className="text-xl font-bold" delay={0.3}>Library not found</animate.h1>
+                        <animate.div className="space-y-2" delay={0.45}>
                             <p>We couldn&apos;t find <span className="font-semibold">{selectedLibrary.name}</span> at the following location:</p>
-                            <div className="w-full px-3 py-2 bg-secondary rounded-lg font-mono text-sm ring-1 ring-input overflow-x-auto">
+                            <div className="w-full px-3 py-2 bg-secondary rounded-lg font-mono text-sm ring-1 ring-input select-text overflow-x-auto">
                                 {selectedLibrary.path}
                             </div>
                         </animate.div>
-                        <animate.div className="w-full mt-2 flex justify-center gap-4" delay={0.65}>
+                        <animate.div className="w-full mt-2 flex justify-center gap-4" delay={0.6}>
                             <Button variant="outline" onClick={selectNewLocation}>Select new location</Button>
-                            <Button variant="destructive" onClick={() => removeLibrary(selectedLibrary.id)}>Remove library</Button>
+                            <Button variant="destructive" onClick={handleRemoveLibrary}>Remove library</Button>
                         </animate.div>
                     </CenterLayout>
                 ) : error ? (
                     <CenterLayout>
-                        <animate.div delay={0.2} className="size-18 mb-4 p-4 bg-primary/15 rounded-lg ring-2 ring-primary">
-                            <ErrorCircle24Regular className="size-full drop-shadow-md drop-shadow-primary/50" />
-                        </animate.div>
-                        <animate.h1 className="text-xl font-bold" delay={0.35}>Error accessing library</animate.h1>
-                        <animate.p className="text-muted-foreground" delay={0.5}>There was an issue accessing this library on the filesystem. Please check if your operating system or any other application is blocking access to the folder.</animate.p>
+                        <IconBox className="mb-4">
+                            <ErrorCircle24Regular />
+                        </IconBox>
+                        <animate.h1 className="text-xl font-bold" delay={0.3}>Error accessing library</animate.h1>
+                        <animate.p className="text-muted-foreground" delay={0.45}>There was an issue accessing this library on the filesystem. Please check if your operating system or any other application is blocking access to the folder.</animate.p>
                     </CenterLayout>
                 ) : (
                     <CenterLayout>
-                        <animate.div delay={0.2} className="size-18 mb-4 p-4 bg-primary/15 rounded-lg ring-2 ring-primary">
-                            <ImageMultiple24Regular className="size-full drop-shadow-md drop-shadow-primary/50" />
-                        </animate.div>
-                        <animate.h1 className="text-xl font-bold" delay={0.35}>No library selected</animate.h1>
-                        <animate.p delay={0.5} className="text-muted-foreground">Use the select on the top left to open an existing library or create a new one using the button below.</animate.p>
-                        <animate.div className="w-full mt-2 flex justify-center" delay={0.65}>
+                        <IconBox className="mb-4">
+                            <ImageMultiple24Regular />
+                        </IconBox>
+                        <animate.h1 className="text-xl font-bold" delay={0.3}>No library selected</animate.h1>
+                        <animate.p delay={0.45} className="text-muted-foreground">Use the select on the top left to open an existing library or create a new one using the button below.</animate.p>
+                        <animate.div className="w-full mt-2 flex justify-center" delay={0.6}>
                             <Button variant="outline" onClick={createNewLibrary}>Create new library</Button>
                         </animate.div>
                     </CenterLayout>

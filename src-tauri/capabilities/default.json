@@ -12,6 +12,7 @@
         "core:window:default",
         "core:window:allow-start-dragging",
         "dialog:allow-open",
+        "dialog:allow-save",
         "log:default"
     ]
 }

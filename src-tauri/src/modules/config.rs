@@ -50,7 +50,7 @@ pub fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<b
 }
 
 #[tauri::command]
-pub fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str, path: &str) -> Result<(), String> {
+pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str, path: &str) -> Result<Value, String> {
     let base = Path::new(path);
     let full_path = base.to_path_buf();
     let store = get_store(&app)?;
@@ -89,11 +89,11 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     description TEXT,
-                    cover_photo_type TEXT,
-                    cover_photo_id TEXT,
-                    cover_photo_icon TEXT,
-                    cover_photo_color TEXT,
-                    created_at TEXT NOT NULL
+                    parent TEXT,
+                    color TEXT,
+                    emoji TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (parent) REFERENCES album (id) ON DELETE CASCADE
                 )",
                 [],
             ).map_err(|e| e.to_string())?;
@@ -117,17 +117,19 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: char, color: &str
         Some(Value::Array(arr)) => arr.clone(),
         _ => vec![],
     };
-    libraries.push(serde_json::json!({
+    let value = serde_json::json!({
         "id": Uuid::new_v4().to_string(),
         "name": name,
         "icon": icon,
         "color": color,
         "path": path
-    }));
+    });
+
+    libraries.push(value.clone());
     store.set("libraries", Value::Array(libraries));
 
     store.save().map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(value)
 }
 
 #[tauri::command]

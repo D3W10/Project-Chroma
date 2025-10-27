@@ -6,6 +6,10 @@ export function getLibraries() {
     return tryCatch(() => invoke<Library[]>("get_libraries"));
 }
 
+export function createLibrary(name: string, icon: string, color: string, path: string) {
+    return tryCatch(() => invoke<Library>("create_library", { name, icon, color, path }));
+}
+
 export function checkLibraryPath(libraryId: string) {
     return tryCatch(() => invoke<boolean>("check_library_path", { libraryId }));
 }
