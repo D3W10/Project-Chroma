@@ -154,20 +154,20 @@ function RouteComponent() {
                 </div>
                 <div className="flex gap-2">
                     <div className="p-1 flex items-center gap-1 bg-background/10 rounded-md ring ring-input shadow-xs backdrop-blur-xs *:size-7 *:rounded-sm">
-                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={gridSize === 0} onClick={() => setGridSize(gridSize - 1)}>
+                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={photos.length === 0 || gridSize === 0} onClick={() => setGridSize(gridSize - 1)}>
                             <Add24Filled className="size-5" />
                         </Button>
                         <Separator orientation="vertical" className="data-[orientation=vertical]:h-4/5" />
-                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={gridSize === gridSizes.length - 1} onClick={() => setGridSize(gridSize + 1)}>
+                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={photos.length === 0 || gridSize === gridSizes.length - 1} onClick={() => setGridSize(gridSize + 1)}>
                             <Subtract24Filled className="size-5" />
                         </Button>
                     </div>
                     <div className="p-1 flex items-center gap-1 bg-background/10 rounded-md ring ring-input shadow-xs backdrop-blur-xs *:size-7 *:rounded-sm">
-                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" onClick={() => setSquareThumb(!squareThumb)}>
+                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={photos.length === 0} onClick={() => setSquareThumb(!squareThumb)}>
                             <AutoFitHeight24Regular className="size-5" />
                         </Button>
                         <Separator orientation="vertical" className="data-[orientation=vertical]:h-4/5" />
-                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10">
+                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={photos.length === 0}>
                             <Filter24Regular className="size-5" />
                         </Button>
                     </div>
