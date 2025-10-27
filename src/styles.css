@@ -65,7 +65,7 @@
     --secondary-foreground: var(--color-slate-950);
     --muted: var(--color-slate-100);
     --muted-foreground: var(--color-slate-600);
-    --accent: var(--color-slate-100);
+    --accent: var(--color-slate-200);
     --accent-foreground: var(--color-slate-950);
     --destructive: var(--color-red-500);
     --border: color-mix(in oklch, var(--color-slate-950) 15%, transparent);

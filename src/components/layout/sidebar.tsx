@@ -19,9 +19,9 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
 
                 return (
                     <Link key={item.path} to={item.path}>
-                        <Button variant={isActive ? "outline" : "ghost"} className="w-full h-auto py-3 flex-col gap-1">
-                            <Icon className={"size-7 " + (isActive ? "text-primary" : "text-muted-foreground")} />
-                            <span className={"text-sm " + (isActive ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
+                        <Button variant={isActive ? "outline" : "ghost"} className={`w-full h-auto py-3 flex-col gap-1 ${!isActive ? "text-muted-foreground" : "shadow-sm"}`}>
+                            <Icon className={`size-7 ${isActive ? "text-primary" : ""}`} />
+                            <span className="text-sm">{item.label}</span>
                         </Button>
                     </Link>
                 );
