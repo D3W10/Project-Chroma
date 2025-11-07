@@ -12,7 +12,7 @@
     "app": {
         "windows": [
             {
-                "title": "Project Chroma [BETA]",
+                "title": "Project Chroma",
                 "width": 1280,
                 "height": 800,
                 "minWidth": 1000,

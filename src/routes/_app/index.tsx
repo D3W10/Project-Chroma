@@ -3,7 +3,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Add24Filled, AlbumAdd24Regular, AutoFitHeight24Regular, Delete24Regular, EyeOff24Regular, Filter24Regular, Heart24Regular, Info24Regular, Share24Regular, Subtract24Filled } from "@fluentui/react-icons";
+import { Add24Filled, AlbumAdd24Regular, AutoFitHeight24Regular, Delete24Regular, EyeOff24Regular, Filter24Regular, Heart16Filled, Heart16Regular, Heart24Filled, Heart24Regular, Info24Regular, Share24Regular, Subtract24Filled } from "@fluentui/react-icons";
 import { animate } from "@/components/animated";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldSet, FieldTitle } from "@/components/ui/field";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { IconBox } from "@/components/custom/IconBox";
-import { getPhotos, addPhoto } from "@/lib/invoker";
+import { getPhotos, addPhoto, setPhotosFavorite } from "@/lib/invoker";
 import { useNotifications } from "@/lib/useNotifications";
 import { useLibrary } from "@/lib/useLibrary";
 import type { Photo } from "@/lib/models";
@@ -26,7 +26,7 @@ const gridSizes = ["grid-cols-3", "grid-cols-5", "grid-cols-7", "grid-cols-9"];
 
 function RouteComponent() {
     const [photos, setPhotos] = useState<Photo[]>([]);
-    const [selected, setSelected] = useState<string[]>([]);
+    const [selected, setSelected] = useState<Photo[]>([]);
     const [lastIndex, setLastIndex] = useState(-1);
     const [gridSize, setGridSize] = useState(2);
     const [squareThumb, setSquareThumb] = useState(false);
@@ -72,27 +72,27 @@ function RouteComponent() {
         }
     }
 
-    function handleSelect(event: React.MouseEvent<HTMLElement, MouseEvent>, index: number, photoId: string) {
+    function handleSelect(event: React.MouseEvent<HTMLElement, MouseEvent>, index: number, photo: Photo) {
         const isShift = event.shiftKey;
         const isCtrlOrCmd = event.metaKey || event.ctrlKey;
 
         if (isShift && lastIndex !== -1) {
             const [start, end] = [lastIndex, index].sort((a, b) => a - b);
-            const rangeIds = photos.slice(start, end + 1).map(p => p.id);
+            const rangeIds = photos.slice(start, end + 1);
             setSelected(prev => Array.from(new Set([...prev, ...rangeIds])));
         } else if (isCtrlOrCmd) {
-            setSelected(prev => prev.includes(photoId) ? prev.filter(id => id !== photoId) : [...prev, photoId]);
+            setSelected(prev => prev.includes(photo) ? prev.filter(p => p.id !== photo.id) : [...prev, photo]);
             setLastIndex(index);
         } else {
-            setSelected([photoId]);
+            setSelected([photo]);
             setLastIndex(index);
         }
     }
 
-    function handleRightClick(index: number, photoId: string) {
-        if (selected.includes(photoId)) return;
+    function handleRightClick(index: number, photo: Photo) {
+        if (selected.includes(photo)) return;
 
-        setSelected([photoId]);
+        setSelected([photo]);
         setLastIndex(index);
     }
 
@@ -103,8 +103,26 @@ function RouteComponent() {
         }
     }
 
+    async function setSelectedAsFavorites() {
+        if (!selectedLibrary?.id) return;
+
+        await setPhotosFavorite(selectedLibrary.id, selected.map(p => p.id), !selected.every(p => p.is_favorite));
+        queryClient.invalidateQueries({ queryKey: ["photos"] });
+    }
+
     useEffect(() => {
-        setPhotos(data?.data ?? []);
+        const allPhotos = data?.data ?? [];
+        const newSelected: Photo[] = [];
+
+        setPhotos(allPhotos);
+
+        selected.forEach(s => {
+            const newPic = allPhotos.find(p => p.id === s.id);
+            if (newPic)
+                newSelected.push(newPic);
+        });
+
+        setSelected(newSelected);
     }, [data]);
 
     return (
@@ -172,8 +190,8 @@ function RouteComponent() {
                         </Button>
                     </div>
                     <div className="p-1 flex items-center gap-1 bg-background/10 rounded-md ring ring-input shadow-xs backdrop-blur-xs *:size-7 *:rounded-sm">
-                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={selected.length === 0}>
-                            <Heart24Regular className="size-5" />
+                        <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={selected.length === 0} onClick={setSelectedAsFavorites}>
+                            {selected.length !== 0 && selected.every(p => p.is_favorite) ? <Heart24Filled className="size-5" /> : <Heart24Regular className="size-5" />}
                         </Button>
                         <Separator orientation="vertical" className="data-[orientation=vertical]:h-4/5" />
                         <Button variant="ghost" size="icon" className="enabled:hover:bg-foreground/10" disabled={selected.length === 0}>
@@ -188,7 +206,7 @@ function RouteComponent() {
             </div>
             <div id="photoGrid" className={`w-full min-h-0 p-2 pt-14 ${photos.length > 0 ? "grid gap-1" : "h-full flex justify-center items-center"} ${gridSizes[gridSize]} absolute`}>
                 {photos.length > 0 ? photos.map((p, i) => (
-                    <PhotoItem photo={p} square={squareThumb} selected={selected.includes(p.id)} selectedAmount={selected.length} onClick={e => handleSelect(e, i, p.id)} onContextMenu={() => handleRightClick(i, p.id)} key={p.id} />
+                    <PhotoItem photo={p} square={squareThumb} selected={!!selected.find(s => s.id === p.id)} selectedAmount={selected.length} onClick={e => handleSelect(e, i, p)} onContextMenu={() => handleRightClick(i, p)} key={p.id} />
                 )) : <GridEmpty onAdd={() => setOpenAddPhotos(true)} />}
             </div>
         </div>
@@ -213,27 +231,43 @@ function GridEmpty({ onAdd }: { onAdd: () => unknown }) {
 function PhotoItem({ photo, selected, square, selectedAmount, onClick, onContextMenu }: { photo: Photo; selected: boolean; square: boolean; selectedAmount: number; onClick?: React.MouseEventHandler<HTMLElement>; onContextMenu?: React.MouseEventHandler<HTMLElement> }) {
     const [error, setError] = useState(false);
     const { selectedLibrary } = useLibrary();
+    const queryClient = useQueryClient();
 
     const horizontal = !square ? photo.width > photo.height : photo.width < photo.height;
+    const photoContainerStyles = {
+        normal: `${horizontal ? "w-full" : "h-full"} flex justify-center items-center ${!square ? "relative" : ""} rounded-sm ${selected && !square ? "ring-3 ring-primary ring-offset-3 ring-offset-background" : ""} overflow-hidden transition-[box-shadow]`,
+        error: `size-full flex flex-col justify-center items-center ${!square ? "relative" : ""} gap-1 bg-muted rounded-sm ${selected && !square ? "ring-3 ring-primary ring-offset-3 ring-offset-background" : ""} transition-[box-shadow]`,
+    };
+
+    function setPhotoFavorite(e: React.MouseEvent<HTMLElement, MouseEvent>) {
+        if (!selectedLibrary?.id) return;
+
+        e.stopPropagation();
+        setPhotosFavorite(selectedLibrary.id, [photo.id], !photo.is_favorite);
+        queryClient.invalidateQueries({ queryKey: ["photos"] });
+    }
 
     return (
         <ContextMenu>
             <ContextMenuTrigger className="contents">
-                <div className={`h-full ${!square ? "p-2" : ""} flex justify-center items-center relative rounded-sm overflow-hidden aspect-square transition-[padding] duration-200 before:absolute before:inset-0 before:rounded-sm ${selected && square ? "before:border-3 before:border-primary before:inset-ring-2 before:inset-ring-background" : "before:border-transparent before:inset-ring-transparent"} before:pointer-events-none before:transition-[border,filter]`}>
-                    {!error ? (
-                        <img
-                            src={convertFileSrc(selectedLibrary?.path + "/thumbnails/" + photo.id + ".webp")}
-                            className={`${horizontal ? "w-full" : "h-full"} max-w-[unset] rounded-sm ${selected && !square ? "outline-3 outline-primary outline-offset-3" : ""} transition-[outline]`}
-                            onClick={onClick}
-                            onContextMenu={onContextMenu}
-                            onError={() => setError(true)}
-                        />
-                    ) : (
-                        <div className={`size-full flex flex-col justify-center items-center gap-1 bg-muted rounded-sm ${selected && !square ? "outline-3 outline-primary outline-offset-3" : ""} transition-[outline]`} onClick={onClick} onContextMenu={onContextMenu}>
-                            <p className="text-2xl">📸</p>
-                            <p className="text-xs text-muted-foreground font-medium">{photo.original_name}</p>
-                        </div>
-                    )}
+                <div className={`h-full ${!square ? "p-2" : "relative"} flex justify-center items-center rounded-sm overflow-hidden aspect-square transition-[padding] duration-200 group before:absolute before:inset-0 before:rounded-sm ${selected && square ? "before:border-3 before:border-primary before:inset-ring-2 before:inset-ring-background" : "before:border-transparent before:inset-ring-transparent"} before:pointer-events-none before:transition-[border,box-shadow] before:z-1`}>
+                    <div className={photoContainerStyles[!error ? "normal" : "error"]} onClick={onClick} onContextMenu={onContextMenu}>
+                        {!error ? (
+                            <img
+                                src={convertFileSrc(selectedLibrary?.path + "/thumbnails/" + photo.id + ".webp")}
+                                className={`${horizontal ? "w-full" : "h-full"} max-w-[unset]`}
+                                onError={() => setError(true)}
+                            />
+                        ) : (
+                            <>
+                                <p className="text-2xl">📸</p>
+                                <p className="text-xs text-muted-foreground font-medium">{photo.original_name}</p>
+                            </>
+                        )}
+                        <button className={`size-4.25 flex absolute bottom-1.25 left-1.25 ${!photo.is_favorite ? "opacity-0 group-hover:opacity-100" : ""} drop-shadow-favorite transition-opacity *:size-full`} onClick={setPhotoFavorite}>
+                            {!photo.is_favorite ? <Heart16Regular /> : <Heart16Filled />}
+                        </button>
+                    </div>
                 </div>
             </ContextMenuTrigger>
             <ContextMenuContent>

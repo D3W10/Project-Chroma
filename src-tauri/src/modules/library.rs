@@ -159,6 +159,27 @@ pub async fn add_photo(app: tauri::AppHandle, library_id: String, source_path: S
     Ok(photo)
 }
 
+#[tauri::command]
+pub fn set_photos_favorite(app: tauri::AppHandle, library_id: String, photo_ids: Vec<String>, value: bool) -> Result<(), String> {
+    if photo_ids.is_empty() {
+        return Ok(());
+    }
+
+    let mut conn = get_db_connection(&app, &library_id)?;
+    let tx = conn.transaction().map_err(|e| utils::treat(e, "Unable to begin transaction"))?;
+    for photo_id in &photo_ids {
+        tx.execute(
+            "UPDATE photo SET is_favorite = ?1 WHERE id = ?2",
+            params![
+                if value { 1 } else { 0 },
+                photo_id
+            ],
+        ).map_err(|e| utils::treat(e, "Unable to update photo favorite state"))?;
+    }
+    tx.commit().map_err(|e| utils::treat(e, "Unable to save favorite photos"))?;
+    Ok(())
+}
+
 fn generate_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), String> {
     let thumb = img.thumbnail(512, 512);
 

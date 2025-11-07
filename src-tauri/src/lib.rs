@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 mod modules;
 use modules::config::{get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library, set_selected_library};
-use modules::library::{get_photos, add_photo};
+use modules::library::{get_photos, add_photo, set_photos_favorite};
 use modules::utils::Photo;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -46,6 +46,7 @@ pub fn run() {
             set_selected_library,
             get_photos,
             add_photo,
+            set_photos_favorite,
             delete_photo,
             get_albums,
             create_album,

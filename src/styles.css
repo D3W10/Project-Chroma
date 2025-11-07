@@ -28,6 +28,8 @@
     --color-ring: var(--ring);
 
     --color-stunning-blue: oklch(0.7486 0.1719 209.03);
+
+    --drop-shadow-favorite: 0 0 2px rgb(0 0 0 / 0.75);
 }
 
 :root {
@@ -75,7 +77,7 @@
 
 @layer base {
     * {
-        @apply select-none;
+        @apply select-none [-webkit-transform:translateZ(0)];
     }
 
     body {

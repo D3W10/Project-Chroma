@@ -37,3 +37,7 @@ export function getPhotos(libraryId: string) {
 export function addPhoto(libraryId: string, sourcePath: string) {
     return tryCatch(() => invoke("add_photo", { libraryId, sourcePath }));
 }
+
+export function setPhotosFavorite(libraryId: string, photoIds: string[], value: boolean) {
+    return tryCatch(() => invoke("set_photos_favorite", { libraryId, photoIds, value }));
+}
