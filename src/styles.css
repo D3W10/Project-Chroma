@@ -77,7 +77,7 @@
 
 @layer base {
     * {
-        @apply select-none [-webkit-transform:translateZ(0)];
+        @apply select-none;
     }
 
     body {

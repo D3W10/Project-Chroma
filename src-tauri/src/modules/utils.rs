@@ -50,7 +50,7 @@ fn unable_to_load_image<E: std::fmt::Display>(e: E) -> String {
 
 pub fn load_image(data: &Vec<u8>, ext: &str) -> Result<image::DynamicImage, String> {
     match ext.to_lowercase().as_str() {
-        "jpg" | "jpeg" | "png" | "gif" | "webp" => {
+        "jpg" | "jpeg" | "png" | "webp" | "gif" => {
             image::load_from_memory(data).map_err(unable_to_load_image)
         }
         "heic" | "heif" => {
@@ -68,6 +68,6 @@ pub fn load_image(data: &Vec<u8>, ext: &str) -> Result<image::DynamicImage, Stri
                 .map(image::DynamicImage::ImageRgb8)
                 .ok_or_else(|| utils::treat_msg("Unable to load image"))
         }
-        _ => Err("File type not supported".to_string()),
+        _ => Err("File type not supported".to_string())
     }
 }

@@ -25,13 +25,15 @@ interface NotificationPromiseOptions {
         title: string;
         description: string;
     };
+    onSuccess?: () => unknown;
+    onError?: () => unknown;
 }
 
 export const useNotifications = create<NotificationStore>((set, get) => ({
     notifications: [],
     isOpen: false,
 
-    pushNoti: (title: string, description?: string, type: NotificationType = "info", { promise, progress, peek, success, error }: NotificationPromiseOptions = {}) => {
+    pushNoti: (title: string, description?: string, type: NotificationType = "info", { promise, progress, peek, success, error, onSuccess, onError }: NotificationPromiseOptions = {}) => {
         const id = self.crypto.randomUUID();
         const notification: Notification = {
             id,
@@ -72,6 +74,8 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                     const currentIsOpen = get().isOpen;
                     if (!currentIsOpen) toast.success(data.title, data.description ? { description: data.description } : undefined);
                     console.log("[SUCC] " + data.title + " - " + data.description);
+
+                    onSuccess?.();
                 }).catch(() => {
                     const data = { title, description, ...error };
                     get().updateNoti(id, { type: "error", ...error });
@@ -79,6 +83,8 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                     const currentIsOpen = get().isOpen;
                     if (!currentIsOpen) toast.error(data.title, data.description ? { description: data.description } : undefined);
                     console.log("[ERRO] " + data.title + " - " + data.description);
+
+                    onError?.();
                 });
             }
         }
