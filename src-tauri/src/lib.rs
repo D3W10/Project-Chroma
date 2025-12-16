@@ -8,9 +8,9 @@ use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
 mod modules;
-use modules::config::{get_store, get_libraries, check_library_path, create_library, update_library_path, remove_library, get_selected_library, set_selected_library};
-use modules::library::{get_photos, add_photo, set_photos_favorite};
-use modules::utils::Photo;
+use modules::config;
+use modules::library;
+use modules::utils::{self, Item};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Album {
@@ -23,9 +23,9 @@ pub struct Album {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct AlbumPhoto {
+pub struct AlbumItem {
     pub album_id: String,
-    pub photo_id: String,
+    pub item_id: String,
     pub added_at: DateTime<Utc>,
 }
 
@@ -37,16 +37,16 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
-            get_libraries,
-            check_library_path,
-            create_library,
-            update_library_path,
-            remove_library,
-            get_selected_library,
-            set_selected_library,
-            get_photos,
-            add_photo,
-            set_photos_favorite,
+            config::get_libraries,
+            config::check_library_path,
+            config::create_library,
+            config::update_library_path,
+            config::remove_library,
+            config::get_selected_library,
+            config::set_selected_library,
+            library::get_items,
+            library::add_items,
+            library::set_items_favorite,
             delete_photo,
             get_albums,
             create_album,
@@ -65,7 +65,7 @@ pub fn run() {
 }
 
 fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
-    let store = get_store(app)?;
+    let store = config::get_store(app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
         _ => return Err("No libraries found".to_string()),
@@ -268,46 +268,24 @@ fn get_album_photos(
     app: tauri::AppHandle,
     library_id: String,
     album_id: String,
-) -> Result<Vec<Photo>, String> {
+) -> Result<Vec<Item>, String> {
     let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn
         .prepare(
-            "SELECT p.* FROM photo p 
-         INNER JOIN album_photo ap ON p.id = ap.photo_id 
-         WHERE ap.album_id = ?1 
-         ORDER BY ap.added_at DESC",
+            "SELECT p.* FROM item p 
+            INNER JOIN album_item ap ON p.id = ap.item_id 
+            WHERE ap.album_id = ?1 
+            ORDER BY ap.added_at DESC",
         )
         .map_err(|e| e.to_string())?;
 
-    let photo_iter = stmt
-        .query_map(params![album_id], |row| {
-            Ok(Photo {
-                id: row.get(0)?,
-                original_name: row.get(1)?,
-                file_type: row.get(2)?,
-                file_size: row.get(3)?,
-                width: row.get(4)?,
-                height: row.get(5)?,
-                checksum: row.get(6)?,
-                is_favorite: row.get::<_, i32>(7)? != 0,
-                is_screenshot: row.get::<_, i32>(8)? != 0,
-                is_screen_recording: row.get::<_, i32>(9)? != 0,
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
-                    .map_err(|_e| {
-                        rusqlite::Error::InvalidColumnType(
-                            10,
-                            "created_at".to_string(),
-                            rusqlite::types::Type::Text,
-                        )
-                    })?
-                    .with_timezone(&Utc),
-            })
-        })
+    let item_iter = stmt
+        .query_map(params![album_id], |row| utils::deserialize_item(row))
         .map_err(|e| e.to_string())?;
 
-    let mut photos = Vec::new();
-    for photo in photo_iter {
-        photos.push(photo.map_err(|e| e.to_string())?);
+    let mut items = Vec::new();
+    for item in item_iter {
+        items.push(item.map_err(|e| e.to_string())?);
     }
-    Ok(photos)
+    Ok(items)
 }

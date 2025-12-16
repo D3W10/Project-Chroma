@@ -6,7 +6,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     const location = useLocation();
 
     const navItems = [
-        { path: "/", label: "Photos", icon: Image24Regular, iconSelected: Image24Filled },
+        { path: "/", label: "Library", icon: Image24Regular, iconSelected: Image24Filled },
         { path: "/albums", label: "Albums", icon: Album24Regular, iconSelected: Album24Filled },
         { path: "/favorites", label: "Favorites", icon: Heart24Regular, iconSelected: Heart24Filled },
     ];

@@ -1,23 +1,24 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use image::{DynamicImage, GenericImageView, ImageFormat};
 use rusqlite::{params, Connection};
 use serde_json::Value;
+use rayon::prelude::*;
 use std::fs;
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-use crate::modules::config::get_store;
+use crate::modules::config;
 use crate::modules::utils;
 
 fn get_db_connection(app: &tauri::AppHandle, library_id: &str) -> Result<Connection, String> {
     let meta_path = get_library_root_path(app, library_id)?;
-    let db_path = meta_path.join("photos.db");
+    let db_path = meta_path.join("lib.db");
     Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))
 }
 
 fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<PathBuf, String> {
-    let store = get_store(&app)?;
+    let store = config::get_store(&app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
         _ => vec![],
@@ -33,57 +34,90 @@ fn get_library_root_path(app: &tauri::AppHandle, library_id: &str) -> Result<Pat
 }
 
 #[tauri::command]
-pub fn get_photos(app: tauri::AppHandle, library_id: String) -> Result<Vec<utils::Photo>, String> {
+pub fn get_items(app: tauri::AppHandle, library_id: String) -> Result<Vec<utils::Item>, String> {
     let conn = get_db_connection(&app, &library_id)?;
-    let mut stmt = conn.prepare("SELECT * FROM photo ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain photos"))?;
+    let mut stmt = conn.prepare("SELECT * FROM item ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain items"))?;
 
-    let photo_iter = stmt.query_map([], |row| {
-        Ok(utils::Photo {
-            id: row.get(0)?,
-            original_name: row.get(1)?,
-            file_type: row.get(2)?,
-            file_size: row.get(3)?,
-            width: row.get(4)?,
-            height: row.get(5)?,
-            checksum: row.get(6)?,
-            is_favorite: row.get::<_, i32>(7)? != 0,
-            is_screenshot: row.get::<_, i32>(8)? != 0,
-            is_screen_recording: row.get::<_, i32>(9)? != 0,
-            created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(10)?)
-                .map_err(|_| {
-                    rusqlite::Error::InvalidColumnType(
-                        10,
-                        "created_at".to_string(),
-                        rusqlite::types::Type::Text,
-                    )
-                })?
-                .with_timezone(&Utc),
-        })
-    })
-    .map_err(|e| utils::treat(e, "Unable to obtain photos"))?;
+    let item_iter = stmt.query_map([], |row| utils::deserialize_item(row)).map_err(|e| utils::treat(e, "Unable to obtain items"))?;
 
-    let mut photos = Vec::new();
-    for photo in photo_iter {
-        photos.push(photo.map_err(|e| utils::treat(e, "Unable to obtain photos"))?);
+    let mut items = Vec::new();
+    for item in item_iter {
+        items.push(item.map_err(|e| utils::treat(e, "Unable to obtain items"))?);
     }
 
-    Ok(photos)
+    Ok(items)
 }
 
 #[tauri::command]
-pub async fn add_photo(app: tauri::AppHandle, library_id: String, source_path: String) -> Result<utils::Photo, String> {
+pub async fn add_items(app: tauri::AppHandle, library_id: String, source_paths: Vec<String>, delete_source: bool) -> Result<Vec<utils::Item>, String> {
     let library_root = get_library_root_path(&app, &library_id)?;
+    let originals_dir = library_root.join("originals");
+    fs::create_dir_all(&originals_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
+    let thumbs_dir = library_root.join("thumbnails");
+    fs::create_dir_all(&thumbs_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
 
-    let source_path = Path::new(&source_path);
+    let items: Result<Vec<utils::Item>, String> = source_paths
+        .par_iter()
+        .map(|path| prepare_item(path, &originals_dir, &thumbs_dir, delete_source))
+        .collect();
+
+    let items = items?;
+
+    let mut conn = get_db_connection(&app, &library_id)?;
+    let tx = conn.transaction().map_err(|e| utils::treat(e, "Unable to begin transaction"))?;
+
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO item (
+                id,
+                original_name,
+                file_type,
+                file_size,
+                width,
+                height,
+                checksum,
+                is_favorite,
+                is_screenshot,
+                is_screen_recording,
+                live_video,
+                created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)"
+        ).map_err(|e| utils::treat(e, "Unable to prepare statement"))?;
+
+        for item in &items {
+            stmt.execute(params![
+                item.id,
+                item.original_name,
+                item.file_type,
+                item.file_size,
+                item.width,
+                item.height,
+                item.checksum,
+                item.is_favorite as i32,
+                item.is_screenshot as i32,
+                item.is_screen_recording as i32,
+                item.live_video,
+                item.created_at.to_rfc3339()
+            ]).map_err(|e| utils::treat(e, "Unable to import item to the library"))?;
+        }
+    }
+
+    tx.commit().map_err(|e| utils::treat(e, "Unable to commit transaction"))?;
+
+    Ok(items)
+}
+
+fn prepare_item(source_path_str: &str, originals_dir: &Path, thumbs_dir: &Path, delete_source: bool) -> Result<utils::Item, String> {
+    let source_path = Path::new(source_path_str);
     if !source_path.exists() {
-        return Err("Source file does not exist".to_string());
+        return Err(format!("Source file does not exist: {}", source_path_str));
     }
 
     let original_name = source_path.file_name().and_then(|n| n.to_str()).ok_or("Invalid file name")?;
     let file_extension = source_path.extension().and_then(|ext| ext.to_str()).unwrap_or("");
     let file_type = utils::map_extension_to_mime(file_extension);
 
-    let file_data = fs::read(source_path).map_err(|e| utils::treat(e, "Unable to read phot data"))?;
+    let file_data = fs::read(source_path).map_err(|e| utils::treat(e, "Unable to read photo data"))?;
     let checksum = format!("{:x}", md5::compute(&file_data));
     let file_size = file_data.len() as u64;
 
@@ -109,23 +143,21 @@ pub async fn add_photo(app: tauri::AppHandle, library_id: String, source_path: S
     }
 
     let (width, height) = image.dimensions();
-    let photo_id = Uuid::new_v4().to_string();
-    let file_name = format!("{}.{}", photo_id, file_extension);
+    let item_id = Uuid::new_v4().to_string();
+    let file_name = format!("{}.{}", item_id, file_extension);
 
-    let originals_dir = library_root.join("originals");
-    fs::create_dir_all(&originals_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
     let dest_path = originals_dir.join(&file_name);
+    fs::copy(source_path, &dest_path).map_err(|e| utils::treat(e, "Unable to copy item"))?;
 
-    fs::copy(source_path, &dest_path).map_err(|e| utils::treat(e, "Unable to copy photo"))?;
-
-    let thumbs_dir = library_root.join("thumbnails");
-    fs::create_dir_all(&thumbs_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
-    let thumb_path = thumbs_dir.join(format!("{}.webp", photo_id));
+    let thumb_path = thumbs_dir.join(format!("{}.webp", item_id));
     generate_thumbnail(&image, &thumb_path)?;
 
-    let now = Utc::now();
-    let photo = utils::Photo {
-        id: photo_id.clone(),
+    if delete_source {
+        let _ = fs::remove_file(source_path);
+    }
+
+    Ok(utils::Item {
+        id: item_id,
         original_name: original_name.to_string(),
         file_type: file_type.to_string(),
         file_size,
@@ -135,48 +167,29 @@ pub async fn add_photo(app: tauri::AppHandle, library_id: String, source_path: S
         is_favorite: false,
         is_screenshot: false,
         is_screen_recording: false,
-        created_at: now,
-    };
-
-    let conn = get_db_connection(&app, &library_id)?;
-    conn.execute(
-        "INSERT INTO photo (id, original_name, file_type, file_size, width, height, checksum, is_favorite, is_screenshot, is_screen_recording, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![
-            photo.id,
-            photo.original_name,
-            photo.file_type,
-            photo.file_size,
-            photo.width,
-            photo.height,
-            photo.checksum,
-            photo.is_favorite as i32,
-            photo.is_screenshot as i32,
-            photo.is_screen_recording as i32,
-            photo.created_at.to_rfc3339()
-        ],
-    ).map_err(|e| utils::treat(e, "Unable to add photo to the library"))?;
-
-    Ok(photo)
+        live_video: None,
+        created_at: Utc::now(),
+    })
 }
 
 #[tauri::command]
-pub fn set_photos_favorite(app: tauri::AppHandle, library_id: String, photo_ids: Vec<String>, value: bool) -> Result<(), String> {
-    if photo_ids.is_empty() {
+pub fn set_items_favorite(app: tauri::AppHandle, library_id: String, item_ids: Vec<String>, value: bool) -> Result<(), String> {
+    if item_ids.is_empty() {
         return Ok(());
     }
 
     let mut conn = get_db_connection(&app, &library_id)?;
     let tx = conn.transaction().map_err(|e| utils::treat(e, "Unable to begin transaction"))?;
-    for photo_id in &photo_ids {
+    for item_id in &item_ids {
         tx.execute(
-            "UPDATE photo SET is_favorite = ?1 WHERE id = ?2",
+            "UPDATE item SET is_favorite = ?1 WHERE id = ?2",
             params![
                 if value { 1 } else { 0 },
-                photo_id
+                item_id
             ],
-        ).map_err(|e| utils::treat(e, "Unable to update photo favorite state"))?;
+        ).map_err(|e| utils::treat(e, "Unable to update the item favorite state"))?;
     }
-    tx.commit().map_err(|e| utils::treat(e, "Unable to save favorite photos"))?;
+    tx.commit().map_err(|e| utils::treat(e, "Unable to save favorite items"))?;
     Ok(())
 }
 

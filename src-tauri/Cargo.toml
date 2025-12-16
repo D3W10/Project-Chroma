@@ -28,3 +28,4 @@ md5 = "0.7"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp", "gif"] }
 libheif-rs = "2.4.0"
 kamadak-exif = "0.6.1"
+rayon = "1.11.0"

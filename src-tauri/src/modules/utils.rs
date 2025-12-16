@@ -1,13 +1,14 @@
 use chrono::{DateTime, Utc};
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use log;
+use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 use crate::modules::utils;
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Photo {
+pub struct Item {
     pub id: String,
     pub original_name: String,
     pub file_type: String,
@@ -18,6 +19,7 @@ pub struct Photo {
     pub is_favorite: bool,
     pub is_screenshot: bool,
     pub is_screen_recording: bool,
+    pub live_video: Option<String>,
     pub created_at: DateTime<Utc>,
 }
 
@@ -70,4 +72,24 @@ pub fn load_image(data: &Vec<u8>, ext: &str) -> Result<image::DynamicImage, Stri
         }
         _ => Err("File type not supported".to_string())
     }
+}
+
+pub fn deserialize_item(item: &Row<'_>) -> Result<Item, rusqlite::Error> {
+    Ok(Item {
+        id: item.get(0)?,
+        original_name: item.get(1)?,
+        file_type: item.get(2)?,
+        file_size: item.get(3)?,
+        width: item.get(4)?,
+        height: item.get(5)?,
+        checksum: item.get(6)?,
+        is_favorite: item.get::<_, i32>(7)? != 0,
+        is_screenshot: item.get::<_, i32>(8)? != 0,
+        is_screen_recording: item.get::<_, i32>(9)? != 0,
+        live_video: item.get::<_, Option<String>>(10)?,
+        created_at: DateTime::parse_from_rfc3339(&item.get::<_, String>(11)?)
+            .map_err(|_| {
+                rusqlite::Error::InvalidColumnType(12, "created_at".to_string(), rusqlite::types::Type::Text)
+            })?.with_timezone(&Utc),
+    })
 }

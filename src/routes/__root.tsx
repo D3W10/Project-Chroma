@@ -139,7 +139,7 @@ function RootComponent() {
                 <DialogContent showCloseButton={false} onInteractOutside={e => isProcessing && e.preventDefault()}>
                     <DialogHeader>
                         <DialogTitle>Create new library</DialogTitle>
-                        <DialogDescription>A library is where you store all your photos and albums. You may create multiple libraries if you want to store photos on different locations</DialogDescription>
+                        <DialogDescription>A library is where you store all your photos, videos and albums. You may create multiple libraries if you want to store items on different locations</DialogDescription>
                     </DialogHeader>
                     <FieldSet>
                         <FieldGroup>

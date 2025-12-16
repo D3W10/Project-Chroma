@@ -39,7 +39,7 @@ pub fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<b
         if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
             if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
                 let base_path = Path::new(path);
-                let db_path = base_path.join("photos.db");
+                let db_path = base_path.join("lib.db");
 
                 return Ok(base_path.exists() && db_path.exists());
             }
@@ -60,7 +60,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
         Err(e) => println!("Error creating library: {}", e),
     }
 
-    let conn = Connection::open(full_path.join("photos.db").to_str().unwrap());
+    let conn = Connection::open(full_path.join("lib.db").to_str().unwrap());
 
     match conn {
         Ok(conn) => {
@@ -68,7 +68,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
             let _ = fs::create_dir_all(full_path.join("thumbnails"));
 
             conn.execute(
-                "CREATE TABLE IF NOT EXISTS photo (
+                "CREATE TABLE IF NOT EXISTS item (
                     id TEXT PRIMARY KEY,
                     original_name TEXT NOT NULL,
                     file_type TEXT NOT NULL,
@@ -79,6 +79,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
                     is_favorite INTEGER DEFAULT 0,
                     is_screenshot INTEGER DEFAULT 0,
                     is_screen_recording INTEGER DEFAULT 0,
+                    live_video TEXT,
                     created_at TEXT NOT NULL
                 )",
                 [],
@@ -99,13 +100,13 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
             ).map_err(|e| e.to_string())?;
 
             conn.execute(
-                "CREATE TABLE IF NOT EXISTS album_photo (
+                "CREATE TABLE IF NOT EXISTS album_item (
                     album_id TEXT NOT NULL,
-                    photo_id TEXT NOT NULL,
+                    item_id TEXT NOT NULL,
                     added_at TEXT NOT NULL,
-                    PRIMARY KEY (album_id, photo_id),
+                    PRIMARY KEY (album_id, item_id),
                     FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
-                    FOREIGN KEY (photo_id) REFERENCES photo (id) ON DELETE CASCADE
+                    FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
                 )",
                 [],
             ).map_err(|e| e.to_string())?;

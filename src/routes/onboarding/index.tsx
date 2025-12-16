@@ -40,7 +40,7 @@ function RouteComponent() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: QUICK_EASE, delay: 2.8 }}
                 >
-                    A photo library app that helps you organize your photos
+                    A photo library app that helps you organize your photos and videos
                 </motion.h2>
             </div>
             <div className="w-full mb-12 space-y-6">
@@ -62,7 +62,7 @@ function RouteComponent() {
                     <Phone48Filled />
                     <div className="flex-1 space-y-1">
                         <h3 className="font-bold">Easy import from iPhone/iPad</h3>
-                        <p className="text-sm text-muted-foreground font-medium">Easily import the photos from your iPhone and iPad with full resolution and metadata</p>
+                        <p className="text-sm text-muted-foreground font-medium">Easily import the photos/videos from your iPhone and iPad with full resolution and metadata</p>
                     </div>
                 </animate.div>
             </div>

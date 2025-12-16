@@ -6,7 +6,7 @@ export interface Library {
     path: string;
 }
 
-export interface Photo {
+export interface Item {
     id: string;
     original_name: string;
     file_type: string;
@@ -17,6 +17,7 @@ export interface Photo {
     is_favorite: boolean;
     is_screenshot: boolean;
     is_screen_recording: boolean;
+    live_video?: string;
     created_at: string;
 }
 
