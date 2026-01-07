@@ -9,6 +9,7 @@ export interface Library {
 export interface Item {
     id: string;
     original_name: string;
+    file_ext: string;
     file_type: string;
     file_size: number;
     width: number;
@@ -21,6 +22,33 @@ export interface Item {
     created_at: string;
 }
 
+export interface Album {
+    id: string;
+    name: string;
+    description: string | null;
+    parent: string | null;
+    selected_cover: number;
+    icon: string | null;
+    color: string | null;
+    cover_photo: string | null;
+    created_at: string;
+}
+
+export interface ImportItem {
+    source_path: string;
+    live_video_path: string | null;
+}
+
+export interface ImportCandidate {
+    items_to_import: ImportItem[];
+    conflicts: Conflict[];
+}
+
+export interface Conflict {
+    photo_path: string;
+    video_candidates: string[];
+}
+
 export interface Notification {
     id: string;
     title: string;
@@ -28,7 +56,8 @@ export interface Notification {
     type: NotificationType;
     peek?: string;
     timestamp: Date;
-    progress?: number;
+    hasProgress?: boolean;
+    progress: number;
 }
 
 export type NotificationType = "info" | "success" | "error" | "warning" | "promise";

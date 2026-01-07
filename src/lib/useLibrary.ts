@@ -7,9 +7,11 @@ interface LibraryState {
     selectedLibrary: Library | null;
     setSelectedLibrary: (library: Library | null) => void;
     openCreateLibrary: boolean;
-    setOpenCreateLibrary: (show: boolean) => void;
+    setOpenCreateLibrary: (open: boolean) => void;
     pendingLibraryId: string | null;
     setPendingLibraryId: (id: string | null) => void;
+    dialogOpen: boolean;
+    setDialogOpen: (open: boolean) => void;
 }
 
 export const useLibrary = create<LibraryState>(set => ({
@@ -18,7 +20,9 @@ export const useLibrary = create<LibraryState>(set => ({
     selectedLibrary: null,
     setSelectedLibrary: library => set({ selectedLibrary: library }),
     openCreateLibrary: false,
-    setOpenCreateLibrary: library => set({ openCreateLibrary: library }),
+    setOpenCreateLibrary: open => set({ openCreateLibrary: open }),
     pendingLibraryId: null,
-    setPendingLibraryId: library => set({ pendingLibraryId: library }),
+    setPendingLibraryId: id => set({ pendingLibraryId: id }),
+    dialogOpen: false,
+    setDialogOpen: open => set({ dialogOpen: open }),
 }));

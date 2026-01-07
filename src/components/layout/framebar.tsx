@@ -1,14 +1,15 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
-import { ChevronUpDown16Regular, Settings24Regular, TextBulletListSquare24Regular } from "@fluentui/react-icons";
+import { IconClipboardList, IconSelector, IconSettings } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { IconColor } from "@/components/IconColor";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { Command, CommandGroup, CommandItem, CommandList, CommandSeparator } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Spinner } from "@/components/custom/Spinner";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
-import { NotificationCenter } from "@/components/custom/NotificationCenter";
 import type { Library, Notification } from "@/lib/models";
 
 export function Framebar({ libraries }: { libraries: Library[] }) {
@@ -17,6 +18,8 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
     const { selectedLibrary, setSelectedLibrary, setOpenCreateLibrary } = useLibrary();
     const { notifications, isOpen, setIsOpen } = useNotifications();
     const location = useLocation();
+
+    const peeking = peekNotification !== null && !!peekNotification.peek;
 
     const handleLibrarySelect = (libraryId: string) => {
         const newLibrary = libraries.find(lib => lib.id === libraryId);
@@ -45,32 +48,28 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                 {libraries.length > 0 && !location.pathname.startsWith("/onboarding") && (
                     <Popover open={isLibraryPanelOpen} onOpenChange={setIsLibraryPanelOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="ghost" className="w-50 py-1.5 justify-between" role="combobox" aria-expanded={isLibraryPanelOpen}>
-                                <div className={"h-full flex items-center gap-2 " + (!selectedLibrary ? "text-muted-foreground" : "")}>
-                                    <div className="size-6 flex justify-center items-center bg-(--lib-color)/50 ring-2 ring-(--lib-color) rounded-sm aspect-square" style={{ "--lib-color": `var(--color-${selectedLibrary ? selectedLibrary.color : "slate-500"})` } as CSSProperties}>
-                                        <span className="text-sm drop-shadow-sm">{selectedLibrary ? selectedLibrary.icon : "📁"}</span>
-                                    </div>
-                                    {selectedLibrary ? selectedLibrary.name : "Select library..."}
-                                </div>
-                                <ChevronUpDown16Regular className="text-muted-foreground" />
+                            <Button variant="ghost" className="w-54 h-full min-w-0 px-2 py-1.5 flex items-center gap-2" role="combobox" aria-expanded={isLibraryPanelOpen}>
+                                <IconColor color={selectedLibrary ? selectedLibrary.color : "var(--color-slate-500)"}>
+                                    {selectedLibrary ? selectedLibrary.icon : "📁"}
+                                </IconColor>
+                                <span className="flex-1 text-left truncate transition-colors">{selectedLibrary ? selectedLibrary.name : "Select library..."}</span>
+                                <IconSelector className="text-muted-foreground" />
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-50 p-0">
+                        <PopoverContent className="w-58 p-0">
                             <Command>
                                 <CommandList>
                                     <CommandGroup>
                                         {libraries.map(lib => (
-                                            <CommandItem key={lib.id} value={lib.id} onSelect={handleLibrarySelect}>
-                                                <div className="size-6 flex justify-center items-center bg-(--lib-color)/50 ring-2 ring-(--lib-color) rounded-sm aspect-square" style={{ "--lib-color": `var(--color-${lib.color})` } as CSSProperties}>
-                                                    <span className="text-sm drop-shadow-sm">{lib.icon}</span>
-                                                </div>
-                                                {lib.name}
+                                            <CommandItem className="[&>svg]:hidden" key={lib.id} value={lib.id} onSelect={handleLibrarySelect}>
+                                                <IconColor color={lib.color}>{lib.icon}</IconColor>
+                                                <span className="truncate">{lib.name}</span>
                                             </CommandItem>
                                         ))}
                                     </CommandGroup>
                                     <CommandSeparator />
                                     <CommandGroup>
-                                        <CommandItem value="Create new library" onSelect={handleCreateLibrary}>
+                                        <CommandItem value="createLib" onSelect={handleCreateLibrary}>
                                             Create new library
                                         </CommandItem>
                                     </CommandGroup>
@@ -83,14 +82,14 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
             <div className="flex items-center gap-1">
                 <Popover open={isOpen} onOpenChange={setIsOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className={`text-muted-foreground ${peekNotification ? "w-auto px-3" : ""}`}>
+                        <Button variant="ghost" size="icon" className={"text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
                             {peekNotification ? (
                                 <>
                                     <Spinner />
                                     {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
                                 </>
                             ) : (
-                                <TextBulletListSquare24Regular className="size-5" />
+                                <IconClipboardList className="size-5" />
                             )}
                         </Button>
                     </PopoverTrigger>
@@ -99,7 +98,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                     </PopoverContent>
                 </Popover>
                 <Button variant="ghost" size="icon" className="text-muted-foreground">
-                    <Settings24Regular className="size-5" />
+                    <IconSettings className="size-5" />
                 </Button>
             </div>
         </div>

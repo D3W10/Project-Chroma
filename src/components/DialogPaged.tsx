@@ -1,10 +1,10 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "motion/react";
+import { animate } from "@/components/animated";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { animate } from "../animated";
 
 interface DialogPagedProps {
-    pages: { [key: string]: { height: number; node: React.ReactNode } };
+    pages: { [key: string]: { height: number; closeable?: boolean; node: React.ReactNode } };
     defaultPage: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -53,7 +53,7 @@ export function DialogPaged({ pages, defaultPage, open, onOpenChange, onPageSwit
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={"overflow-hidden " + (!dialogMoving ? "duration-350 delay-25" : "")} style={{ height: `${dialogHeight}px` }} onAnimationStart={() => !open && setDialogMoving(true)} onAnimationEnd={() => open && setTimeout(() => setDialogMoving(false), 100)}>
+            <DialogContent className={"overflow-hidden " + (!dialogMoving ? "duration-350 delay-25" : "")} showCloseButton={pages[dialogPage].closeable ?? true} style={{ height: `${dialogHeight}px` }} onAnimationStart={() => !open && setDialogMoving(true)} onAnimationEnd={() => open && setTimeout(() => setDialogMoving(false), 100)}>
                 <DialogPagedContext.Provider value={{ page: dialogPage, setPage, close: () => onOpenChange(false) }}>
                     <AnimatePresence initial={false} custom={dialogDirection}>
                         {Object.keys(pages).map(page => dialogPage === page && (
@@ -77,7 +77,7 @@ export function DialogPaged({ pages, defaultPage, open, onOpenChange, onPageSwit
                                 initial="initial"
                                 animate="target"
                                 exit="exit"
-                                className="flex flex-col gap-4 col-1 row-1"
+                                className="flex flex-col gap-6 col-1 row-1"
                             >
                                 {pages[page as keyof typeof pages].node}
                             </animate.div>

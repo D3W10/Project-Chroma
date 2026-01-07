@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
-import { Dismiss12Regular } from "@fluentui/react-icons";
+import { IconX } from "@tabler/icons-react";
 import { getNotiIcon } from "@/lib/utils";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
@@ -38,7 +38,7 @@ if (rootElement && !rootElement.innerHTML) {
                         success: getNotiIcon("success"),
                         warning: getNotiIcon("warning"),
                         error: getNotiIcon("error"),
-                        close: <Dismiss12Regular />,
+                        close: <IconX />,
                     }}
                     gap={6}
                     offset={{ top: 54, right: 44 }}

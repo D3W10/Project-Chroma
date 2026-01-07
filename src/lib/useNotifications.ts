@@ -5,8 +5,9 @@ import type { Notification, NotificationType } from "./models";
 interface NotificationStore {
     notifications: Notification[];
     isOpen: boolean;
-    pushNoti: (title: string, description?: string, type?: NotificationType, options?: NotificationPromiseOptions) => void;
+    pushNoti: (title: string, description?: string, type?: NotificationType, options?: NotificationPromiseOptions) => string;
     updateNoti: (id: string, updates: Partial<Notification>) => void;
+    progressNoti: (id: string, progress: number) => void;
     clearNoti: (id: string) => void;
     clearAll: () => void;
     setIsOpen: (open: boolean) => void;
@@ -15,7 +16,7 @@ interface NotificationStore {
 
 interface NotificationPromiseOptions {
     promise?: Promise<unknown>;
-    progress?: number;
+    hasProgress?: boolean;
     peek?: string;
     success?: {
         title: string;
@@ -33,7 +34,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
     notifications: [],
     isOpen: false,
 
-    pushNoti: (title: string, description?: string, type: NotificationType = "info", { promise, progress, peek, success, error, onSuccess, onError }: NotificationPromiseOptions = {}) => {
+    pushNoti: (title: string, description?: string, type: NotificationType = "info", { promise, hasProgress = false, peek, success, error, onSuccess, onError }: NotificationPromiseOptions = {}) => {
         const id = self.crypto.randomUUID();
         const notification: Notification = {
             id,
@@ -42,7 +43,8 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             type,
             peek,
             timestamp: new Date(),
-            progress,
+            hasProgress,
+            progress: 0,
         };
 
         set(state => ({
@@ -88,12 +90,22 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                 });
             }
         }
+
+        return id;
     },
 
     updateNoti: (id: string, updates: Partial<Notification>) => {
         set(state => ({
             notifications: state.notifications.map(notification =>
                 notification.id === id ? { ...notification, ...updates } : notification,
+            ),
+        }));
+    },
+
+    progressNoti: (id: string, progress: number) => {
+        set(state => ({
+            notifications: state.notifications.map(notification =>
+                notification.id === id ? { ...notification, progress } : notification,
             ),
         }));
     },

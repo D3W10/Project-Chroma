@@ -4,13 +4,13 @@ use serde_json::Value;
 use std::fs;
 use std::path::{Path};
 use std::sync::Arc;
-use tauri::Wry;
+use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Store, StoreExt};
 use uuid::Uuid;
 
 use crate::modules::utils;
 
-pub fn get_store(app: &tauri::AppHandle) -> Result<Arc<Store<Wry>>, String> {
+pub fn get_store(app: &AppHandle) -> Result<Arc<Store<Wry>>, String> {
     app.store("config.json").map_err(|e| utils::treat(e, "Unable to access the configuration file"))
 }
 
@@ -19,7 +19,7 @@ fn save_store(store: Arc<Store<Wry>>) -> Result<(), std::string::String> {
 }
 
 #[tauri::command]
-pub fn get_libraries(app: tauri::AppHandle) -> Result<Value, String> {
+pub fn get_libraries(app: AppHandle) -> Result<Value, String> {
     let store = get_store(&app)?;
     if let Some(v) = store.get("libraries") {
         Ok(v.clone())
@@ -29,7 +29,7 @@ pub fn get_libraries(app: tauri::AppHandle) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<bool, String> {
+pub fn check_library_path(app: AppHandle, library_id: String) -> Result<bool, String> {
     let store = get_store(&app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
@@ -50,7 +50,7 @@ pub fn check_library_path(app: tauri::AppHandle, library_id: String) -> Result<b
 }
 
 #[tauri::command]
-pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str, path: &str) -> Result<Value, String> {
+pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path: &str) -> Result<Value, String> {
     let base = Path::new(path);
     let full_path = base.to_path_buf();
     let store = get_store(&app)?;
@@ -71,6 +71,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
                 "CREATE TABLE IF NOT EXISTS item (
                     id TEXT PRIMARY KEY,
                     original_name TEXT NOT NULL,
+                    file_ext TEXT NOT NULL,
                     file_type TEXT NOT NULL,
                     file_size INTEGER NOT NULL,
                     width INTEGER NOT NULL,
@@ -83,7 +84,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
                     created_at TEXT NOT NULL
                 )",
                 [],
-            ).map_err(|e| e.to_string())?;
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS album (
@@ -91,25 +92,27 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
                     name TEXT NOT NULL,
                     description TEXT,
                     parent TEXT,
+                    selected_cover INTEGER NOT NULL,
+                    icon TEXT,
                     color TEXT,
-                    emoji TEXT,
+                    cover_photo TEXT,
                     created_at TEXT NOT NULL,
                     FOREIGN KEY (parent) REFERENCES album (id) ON DELETE CASCADE
                 )",
                 [],
-            ).map_err(|e| e.to_string())?;
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS album_item (
                     album_id TEXT NOT NULL,
                     item_id TEXT NOT NULL,
-                    added_at TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
                     PRIMARY KEY (album_id, item_id),
                     FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
                     FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
                 )",
                 [],
-            ).map_err(|e| e.to_string())?;
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
         }
         Err(e) => return Err(e.to_string()),
     }
@@ -134,7 +137,7 @@ pub fn create_library(app: tauri::AppHandle, name: &str, icon: &str, color: &str
 }
 
 #[tauri::command]
-pub fn update_library_path(app: tauri::AppHandle, library_id: String, new_path: String) -> Result<(), String> {
+pub fn update_library_path(app: AppHandle, library_id: String, new_path: String) -> Result<(), String> {
     let store = get_store(&app)?;
     let mut libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr.clone(),
@@ -153,7 +156,7 @@ pub fn update_library_path(app: tauri::AppHandle, library_id: String, new_path: 
 }
 
 #[tauri::command]
-pub fn remove_library(app: tauri::AppHandle, library_id: String) -> Result<(), String> {
+pub fn remove_library(app: AppHandle, library_id: String) -> Result<(), String> {
     let store = get_store(&app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
@@ -169,7 +172,7 @@ pub fn remove_library(app: tauri::AppHandle, library_id: String) -> Result<(), S
 }
 
 #[tauri::command]
-pub fn get_selected_library(app: tauri::AppHandle) -> Result<Option<String>, String> {
+pub fn get_selected_library(app: AppHandle) -> Result<Option<String>, String> {
     let store = get_store(&app)?;
     if let Some(v) = store.get("selected_library") {
         Ok(v.clone().as_str().map(|s| s.to_string()))
@@ -179,7 +182,7 @@ pub fn get_selected_library(app: tauri::AppHandle) -> Result<Option<String>, Str
 }
 
 #[tauri::command]
-pub fn set_selected_library(app: tauri::AppHandle, library_id: Option<String>) -> Result<(), String> {
+pub fn set_selected_library(app: AppHandle, library_id: Option<String>) -> Result<(), String> {
     let store = get_store(&app)?;
     if let Some(id) = library_id {
         store.set("selected_library", Value::String(id));
