@@ -25,7 +25,7 @@ export interface Item {
 export interface Album {
     id: string;
     name: string;
-    description: string | null;
+    description: string;
     parent: string | null;
     selected_cover: number;
     icon: string | null;

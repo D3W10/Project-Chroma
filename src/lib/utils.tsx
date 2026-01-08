@@ -39,3 +39,11 @@ export function getNotiIcon(type: Notification["type"]) {
 
     return icons[type];
 }
+
+export function isValidColor(color: string) {
+    document.head.style.color = color;
+    const isValid = document.head.style.color;
+    document.head.removeAttribute("style");
+
+    return !!isValid;
+}

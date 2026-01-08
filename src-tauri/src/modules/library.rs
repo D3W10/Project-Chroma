@@ -306,12 +306,12 @@ fn generate_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub fn get_albums(app: AppHandle, library_id: String) -> Result<Vec<utils::Album>, String> {
+pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<utils::Album>, String> {
     let conn = get_db_connection(&app, &library_id)?;
-    let mut stmt = conn.prepare("SELECT * FROM album ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
+    let mut stmt = conn.prepare("SELECT * FROM album WHERE parent IS ?1 ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
 
-    let album_iter = stmt.query_map([], |row| utils::deserialize_album(row)).map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
-    
+    let album_iter = stmt.query_map(params![parent], |row| utils::deserialize_album(row)).map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
+
     let mut albums = Vec::new();
     for album in album_iter {
         albums.push(album.map_err(|e| utils::treat(e, "Unable to obtain albums"))?);
@@ -321,7 +321,7 @@ pub fn get_albums(app: AppHandle, library_id: String) -> Result<Vec<utils::Album
 }
 
 #[tauri::command]
-pub fn create_album(app: AppHandle, library_id: String, name: String, description: Option<String>, parent: Option<String>, icon: Option<String>, color: Option<String>) -> Result<utils::Album, String> {
+pub fn create_album(app: AppHandle, library_id: String, name: String, description: String, parent: Option<String>, icon: Option<String>, color: Option<String>) -> Result<utils::Album, String> {
     let conn = get_db_connection(&app, &library_id)?;
     let album_id = Uuid::new_v4().to_string();
     let now = Utc::now();

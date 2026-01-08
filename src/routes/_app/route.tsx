@@ -18,7 +18,7 @@ function RouteComponent() {
     const { libraries, selectedLibrary, setOpenCreateLibrary, setPendingLibraryId } = useLibrary();
     const queryClient = useQueryClient();
 
-    const { data: libraryExists, error, isLoading } = useQuery({
+    const { isPending, data: libraryExists, error } = useQuery({
         queryKey: ["library-path", selectedLibrary?.id],
         queryFn: () => checkLibraryPath({ libraryId: selectedLibrary?.id ?? "" }),
         enabled: !!selectedLibrary?.id,
@@ -45,9 +45,9 @@ function RouteComponent() {
 
     return (
         <div className="flex justify-center items-center flex-1">
-            <Sidebar collapsed={!(selectedLibrary && !isLoading && libraryExists?.data)} />
-            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isLoading && libraryExists?.data ? "rounded-tl-xl" : ""} ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200`}>
-                {isLoading ? null : selectedLibrary && libraryExists?.data ? (
+            <Sidebar collapsed={!(selectedLibrary && !isPending && libraryExists?.data)} />
+            <div className={`h-full flex flex-col flex-1 bg-background ${selectedLibrary && !isPending && libraryExists?.data ? "rounded-tl-xl" : ""} ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200`}>
+                {isPending ? null : selectedLibrary && libraryExists?.data ? (
                     <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
                     <CenterLayout key={selectedLibrary.id}>

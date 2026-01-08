@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { IconFolderPlus, IconGridDots, IconInfoCircle, IconLayoutGrid, IconListDetails, IconPencil } from "@tabler/icons-react";
+import { IconChevronLeft, IconFolderPlus, IconGridDots, IconInfoCircle, IconLayoutGrid, IconListDetails, IconPencil } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
 import { IconBox } from "@/components/IconBox";
 import { IconColor } from "@/components/IconColor";
@@ -18,7 +18,7 @@ import type { Album } from "@/lib/models";
 
 type Layout = "card" | "grid" | "list";
 
-export const Route = createFileRoute("/_app/albums/")({
+export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
 });
 
@@ -27,12 +27,12 @@ const gridStyles = cva(
     {
         variants: {
             layout: {
-                card: "grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5",
-                grid: "grid-cols-5 lg:grid-cols-6 2xl:grid-cols-7",
-                list: "",
+                card: "grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4",
+                grid: "grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4",
+                list: "gap-3",
             },
             grid: {
-                true: "grid gap-4",
+                true: "grid",
                 false: "h-full flex justify-center items-center",
             },
         },
@@ -49,11 +49,12 @@ function RouteComponent() {
     const [openCreateAlbum, setOpenCreateAlbum] = useState(false);
     const { selectedLibrary } = useLibrary();
     const navigate = useNavigate();
+    const { id } = Route.useParams();
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: albums });
 
-    const { isLoading, data } = useQuery({
-        queryKey: ["albums"],
-        queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "" }),
+    const { isPending, data } = useQuery({
+        queryKey: ["albums", selectedLibrary?.id, id],
+        queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
     });
 
     useEffect(() => {
@@ -74,12 +75,17 @@ function RouteComponent() {
     return (
         <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
             <div className="p-2 flex justify-between items-center sticky top-0 left-0 right-0 z-10 before:absolute before:inset-0 before:backdrop-blur-xs before:mask-b-from-25% before:-z-10 after:absolute after:inset-0 after:-bottom-4 after:bg-background/70 after:mask-b-from-20% after:-z-20">
-                <div>
+                <div className="flex gap-2">
                     <Button onClick={() => setOpenCreateAlbum(true)}>
                         <IconFolderPlus className="size-4 mr-0.5" />
                         Create album
                     </Button>
-                    <CreateAlbumDialog open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} />
+                    {id && (
+                        <Button variant="outline" size="icon">
+                            <IconChevronLeft className="size-5" />
+                        </Button>
+                    )}
+                    <CreateAlbumDialog currentAlbum={id} open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} />
                 </div>
                 <div className="flex gap-2">
                     <ButtonGroup>
@@ -100,8 +106,8 @@ function RouteComponent() {
                     </ButtonGroup>
                 </div>
             </div>
-            <div className={gridStyles({ layout: viewmode, grid: isLoading || albums.length > 0 })}>
-                {isLoading && <GridLoading />}
+            <div className={gridStyles({ layout: viewmode, grid: isPending || albums.length > 0 })}>
+                {isPending && <GridLoading />}
                 {albums.length > 0 ? albums.map((p, i) => (
                     <AlbumContextMenu
                         key={p.id}
@@ -118,7 +124,7 @@ function RouteComponent() {
                             onContextMenu={() => handleRightClick(i, p)}
                         />
                     </AlbumContextMenu>
-                )) : <GridEmpty onAdd={() => setOpenCreateAlbum(true)} />}
+                )) : <GridEmpty id={id} onAdd={() => setOpenCreateAlbum(true)} />}
             </div>
         </div>
     );
@@ -130,8 +136,8 @@ function GridLoading() {
     ));
 }
 
-function GridEmpty({ onAdd }: { onAdd: () => unknown }) {
-    return (
+function GridEmpty({ id, onAdd }: { id?: string; onAdd: () => unknown }) {
+    return !id ? (
         <CenterLayout>
             <IconBox className="mb-4">
                 <IconInfoCircle />
@@ -141,6 +147,14 @@ function GridEmpty({ onAdd }: { onAdd: () => unknown }) {
             <animate.div className="w-full mt-2 flex justify-center" delay={0.45}>
                 <Button onClick={onAdd}>Create album</Button>
             </animate.div>
+        </CenterLayout>
+    ) : (
+        <CenterLayout>
+            <IconBox className="mb-4">
+                <IconInfoCircle />
+            </IconBox>
+            <animate.h1 className="text-xl font-bold" delay={0.15}>Empty album</animate.h1>
+            <animate.p className="text-muted-foreground" delay={0.3}>This album does not have any photos or videos, time to fill it with memories!</animate.p>
         </CenterLayout>
     );
 }
@@ -155,13 +169,13 @@ interface GridItemProps {
 }
 
 const gridItemStyles = cva(
-    "flex rounded-lg overflow-hidden transition-shadow",
+    "flex overflow-hidden transition-shadow",
     {
         variants: {
             layout: {
-                card: "flex-col",
-                grid: "p-4 flex-col items-center gap-4",
-                list: "p-3",
+                card: "flex-col rounded-lg",
+                grid: "px-4 pt-5 pb-3 flex-col items-center gap-4 rounded-lg",
+                list: "p-3 items-center gap-4 rounded-[18px]",
             },
             selected: {
                 true: "ring-2 ring-primary",
@@ -197,7 +211,7 @@ function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextM
                             <GridItemCover item={item} size="xl" />
                         </div>
                     </div>
-                    <div className="px-5 py-4">
+                    <div className="px-4.5 py-4">
                         <h3 className="text-lg font-semibold">{item.name}</h3>
                         {item.description}
                     </div>
@@ -210,8 +224,7 @@ function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextM
             ) : (
                 <>
                     <GridItemCover item={item} />
-                    <p>{item.name}</p>
-                    <p>{selected}</p>
+                    <h3 className="text-lg font-semibold">{item.name}</h3>
                 </>
             )}
         </div>

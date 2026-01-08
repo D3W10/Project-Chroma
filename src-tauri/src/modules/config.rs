@@ -90,7 +90,7 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
                 "CREATE TABLE IF NOT EXISTS album (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
-                    description TEXT,
+                    description TEXT NOT NULL,
                     parent TEXT,
                     selected_cover INTEGER NOT NULL,
                     icon TEXT,

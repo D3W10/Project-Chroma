@@ -26,7 +26,7 @@ pub struct Item {
 pub struct Album {
     pub id: String,
     pub name: String,
-    pub description: Option<String>,
+    pub description: String,
     pub parent: Option<String>,
     pub selected_cover: u8,
     pub icon: Option<String>,

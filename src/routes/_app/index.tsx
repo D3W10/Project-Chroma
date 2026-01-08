@@ -41,8 +41,8 @@ function RouteComponent() {
     const { pushNoti } = useNotifications();
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items });
 
-    const { isLoading, data } = useQuery({
-        queryKey: ["items"],
+    const { isPending, data } = useQuery({
+        queryKey: ["items", selectedLibrary?.id],
         queryFn: () => getItems({ libraryId: selectedLibrary?.id ?? "" }),
     });
 
@@ -80,7 +80,7 @@ function RouteComponent() {
     return (
         <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
             <Toolbar>
-                <div>
+                <div className="flex gap-2">
                     <Button onClick={() => setOpenAddItems(true)}>
                         <IconPlus className="size-4 mr-0.5" />
                         Import items
@@ -118,8 +118,8 @@ function RouteComponent() {
                     </ButtonGroup>
                 </div>
             </Toolbar>
-            <div className={`w-full min-h-0 p-2 pt-14 ${isLoading || items.length > 0 ? "grid gap-1" : "h-full flex justify-center items-center"} ${gridSizes[gridSize]} absolute`}>
-                {isLoading && <GridLoading />}
+            <div className={`w-full min-h-0 p-2 pt-14 ${isPending || items.length > 0 ? "grid gap-1" : "h-full flex justify-center items-center"} ${gridSizes[gridSize]} absolute`}>
+                {isPending && <GridLoading />}
                 {items.length > 0 ? items.map((p, i) => (
                     <ItemContextMenu
                         key={p.id}
