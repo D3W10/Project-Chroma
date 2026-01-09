@@ -111,13 +111,17 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
     },
 
     clearNoti: (id: string) => {
+        if (get().notifications.find(noti => noti.id === id)?.type === "promise") return;
+
         set(state => ({
             notifications: state.notifications.filter(noti => noti.id !== id),
         }));
     },
 
     clearAll: () => {
-        set({ notifications: [] });
+        set(state => ({
+            notifications: state.notifications.filter(noti => noti.type === "promise"),
+        }));
     },
 
     setIsOpen: (open: boolean) => {

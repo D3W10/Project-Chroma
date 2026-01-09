@@ -3,7 +3,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ErrorCircle24Regular, ImageMultiple24Regular } from "@fluentui/react-icons";
 import { animate } from "@/components/animated";
-import { IconBox } from "@/components/IconBox";
+import { IconBox } from "@/components/custom/IconBox";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";

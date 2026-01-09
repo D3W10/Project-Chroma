@@ -24,7 +24,6 @@ function RootComponent() {
         setOpenCreateLibrary,
         pendingLibraryId,
         setPendingLibraryId,
-        dialogOpen,
     } = useLibrary();
 
     const { data } = useQuery({
@@ -65,9 +64,6 @@ function RootComponent() {
     return (
         <>
             <Framebar libraries={libraries} />
-            {dialogOpen && (
-                <div className="w-full h-12 fixed top-0 left-0 right-0 z-100" data-tauri-drag-region></div>
-            )}
             <Outlet />
             <TanStackRouterDevtools />
             <CreateLibraryDialog open={openCreateLibrary} onOpenChange={setOpenCreateLibrary} />

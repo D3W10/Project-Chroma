@@ -4,17 +4,10 @@ import { Dialog as DialogPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { IconX } from "@tabler/icons-react"
-import { useLibrary } from "@/lib/useLibrary"
 
 function Dialog({
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  const { setDialogOpen } = useLibrary();
-
-  React.useEffect(() => {
-    setDialogOpen(props.open ?? false);
-  }, [props.open]);
-
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
 }
 
@@ -45,7 +38,9 @@ function DialogOverlay({
       data-slot="dialog-overlay"
       className={cn("data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 bg-black/50 duration-300 supports-backdrop-filter:backdrop-blur-xs fixed inset-0 isolate z-50", className)}
       {...props}
-    />
+    >
+      <div id="dialogDragRegion" className="w-full h-12 fixed top-0 left-0 right-0 isolate z-100" data-tauri-drag-region></div>
+    </DialogPrimitive.Overlay>
   )
 }
 
@@ -66,6 +61,7 @@ function DialogContent({
           "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90 ring-foreground/10 grid max-w-[calc(100%-2rem)] gap-6 rounded-xl p-6 text-sm ring-1 duration-300 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2",
           className
         )}
+        onInteractOutside={e => e.target.id === "dialogDragRegion" && e.preventDefault()}
         {...props}
       >
         {children}

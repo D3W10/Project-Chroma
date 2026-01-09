@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
+import colors from "tailwindcss/colors";
 import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,24 +8,22 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ColorPicker } from "@/components/custom/ColorPicker";
 import { EmojiPicker } from "@/components/custom/EmojiPicker";
 import { useLibrary } from "@/lib/useLibrary";
-import { useNotifications } from "@/lib/useNotifications";
 import { createAlbum } from "@/lib/invoker";
+import type { Album } from "@/lib/models";
 
 interface CreateAlbumDialogProps {
     currentAlbum?: string;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    onSuccess?: (album: Album) => void;
 }
 
-export function CreateAlbumDialog({ currentAlbum, open, onOpenChange }: CreateAlbumDialogProps) {
+export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess }: CreateAlbumDialogProps) {
     const [albumName, setAlbumName] = useState("");
-    const [albumColor, setAlbumColor] = useState("");
+    const [albumColor, setAlbumColor] = useState(colors.slate[500]);
     const [albumEmoji, setAlbumEmoji] = useState("📁");
     const [isProcessing, setIsProcessing] = useState(false);
-    const queryClient = useQueryClient();
     const { selectedLibrary } = useLibrary();
-    const navigate = useNavigate();
-    const { pushNoti } = useNotifications();
 
     async function handleCreateAlbum() {
         setIsProcessing(true);
@@ -41,11 +38,8 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange }: CreateAl
             color: albumColor,
             icon: albumEmoji,
         });
-        if (!error) {
-            navigate({ to: "/albums/" + data.id });
-            queryClient.invalidateQueries({ queryKey: ["albums"] });
-            pushNoti("Album created", "The album \"" + albumName + "\" was created successfully!", "success");
-        }
+        if (!error)
+            onSuccess?.(data);
 
         onOpenChange(false);
     }
@@ -53,7 +47,7 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange }: CreateAl
     useEffect(() => {
         if (open) {
             setAlbumName("");
-            setAlbumColor("");
+            setAlbumColor(colors.slate[500]);
             setAlbumEmoji("📁");
             setIsProcessing(false);
         }

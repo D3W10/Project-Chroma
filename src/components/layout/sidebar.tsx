@@ -1,6 +1,7 @@
 import { useLocation, Link } from "@tanstack/react-router";
 import { IconCircles, IconCirclesFilled, IconFolder, IconFolderFilled, IconLayoutGrid, IconLayoutGridFilled } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
     const location = useLocation();
@@ -19,7 +20,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
 
                 return (
                     <Link key={item.path} to={item.path}>
-                        <Button variant={isActive ? "outline" : "ghost"} className={`w-full h-auto py-3 flex-col gap-1 ${!isActive ? "text-muted-foreground" : "shadow-sm"}`}>
+                        <Button variant="ghost" className={cn("w-full h-auto py-3 flex-col gap-1", !isActive ? "text-muted-foreground" : "ring-1 ring-border shadow-lg shadow-primary/15")}>
                             <Icon className={`size-7 ${isActive ? "text-primary" : ""}`} />
                             <span className="text-sm">{item.label}</span>
                         </Button>

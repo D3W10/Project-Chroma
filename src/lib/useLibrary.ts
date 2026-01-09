@@ -10,8 +10,6 @@ interface LibraryState {
     setOpenCreateLibrary: (open: boolean) => void;
     pendingLibraryId: string | null;
     setPendingLibraryId: (id: string | null) => void;
-    dialogOpen: boolean;
-    setDialogOpen: (open: boolean) => void;
 }
 
 export const useLibrary = create<LibraryState>(set => ({
@@ -23,6 +21,4 @@ export const useLibrary = create<LibraryState>(set => ({
     setOpenCreateLibrary: open => set({ openCreateLibrary: open }),
     pendingLibraryId: null,
     setPendingLibraryId: id => set({ pendingLibraryId: id }),
-    dialogOpen: false,
-    setDialogOpen: open => set({ dialogOpen: open }),
 }));

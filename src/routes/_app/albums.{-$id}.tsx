@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconChevronLeft, IconFolderPlus, IconGridDots, IconInfoCircle, IconLayoutGrid, IconListDetails, IconPencil } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
 import { IconBox } from "@/components/IconBox";
@@ -12,6 +12,7 @@ import { AlbumContextMenu } from "@/components/overlays/AlbumContextMenu";
 import { CreateAlbumDialog } from "@/components/overlays/CreateAlbumDialog";
 import { getAlbums } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
+import { useNotifications } from "@/lib/useNotifications";
 import { useSelection } from "@/lib/useSelection";
 import { cva } from "@/lib/utils";
 import type { Album } from "@/lib/models";
@@ -49,13 +50,20 @@ function RouteComponent() {
     const [openCreateAlbum, setOpenCreateAlbum] = useState(false);
     const { selectedLibrary } = useLibrary();
     const navigate = useNavigate();
+    const { pushNoti } = useNotifications();
     const { id } = Route.useParams();
+    const queryClient = useQueryClient();
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: albums });
 
     const { isPending, data } = useQuery({
         queryKey: ["albums", selectedLibrary?.id, id],
         queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
     });
+
+    function onCreateSuccess(album: Album) {
+        queryClient.invalidateQueries({ queryKey: ["albums", selectedLibrary?.id, id] });
+        pushNoti("Album created", "The album \"" + album.name + "\" was created successfully!", "success");
+    }
 
     useEffect(() => {
         const allAlbums = data?.data ?? [];
@@ -85,7 +93,7 @@ function RouteComponent() {
                             <IconChevronLeft className="size-5" />
                         </Button>
                     )}
-                    <CreateAlbumDialog currentAlbum={id} open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} />
+                    <CreateAlbumDialog currentAlbum={id} open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} onSuccess={onCreateSuccess} />
                 </div>
                 <div className="flex gap-2">
                     <ButtonGroup>
@@ -194,16 +202,16 @@ function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextM
         <div className={gridItemStyles({ layout: viewmode, selected })} onClick={onClick} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
             {viewmode === "card" ? (
                 <>
-                    <div className="grid grid-cols-5 grid-rows-2">
+                    <div className="grid grid-cols-5 grid-rows-2 grid-flow-col">
                         <div className="w-full bg-red-100 aspect-square"></div>
-                        <div className="w-full bg-red-300 aspect-square"></div>
-                        <div className="w-full bg-red-500 aspect-square"></div>
-                        <div className="w-full bg-red-700 aspect-square"></div>
-                        <div className="w-full bg-red-900 aspect-square"></div>
                         <div className="w-full bg-red-200 aspect-square"></div>
+                        <div className="w-full bg-red-300 aspect-square"></div>
                         <div className="w-full bg-red-400 aspect-square"></div>
+                        <div className="w-full bg-red-500 aspect-square"></div>
                         <div className="w-full bg-red-600 aspect-square"></div>
+                        <div className="w-full bg-red-700 aspect-square"></div>
                         <div className="w-full bg-red-800 aspect-square"></div>
+                        <div className="w-full bg-red-900 aspect-square"></div>
                         <div className="w-full bg-red-950 aspect-square"></div>
                     </div>
                     <div className="pl-4 pb-5 flex items-center relative">
