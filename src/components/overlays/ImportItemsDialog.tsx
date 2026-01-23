@@ -183,7 +183,7 @@ function LoadingPage({ onItemsSelected }: { onItemsSelected: (items: string[]) =
                     ],
                 });
 
-                if (selected && selected.length) {
+                if (selected && selected.filter(p => !p.toLowerCase().endsWith(".aae")).length) {
                     onItemsSelected(selected);
                     setPage("review");
                 } else
@@ -226,7 +226,7 @@ function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[];
                 <IconBox size="small">
                     <IconPhotoVideo />
                 </IconBox>
-                <p className="font-semibold text-foreground/80">{selectedItems.length + " items selected"}</p>
+                <p className="font-semibold text-foreground/80">{selectedItems.filter(p => !p.toLowerCase().endsWith(".aae")).length + " items selected"}</p>
             </div>
             <FieldSeparator />
             <FieldSet>
@@ -256,7 +256,7 @@ function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[];
                                     <IconHelpCircle className="size-4.5 text-primary" />
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs">
-                                    Automatically detects and groups edited photos (IMG_Exxxx) with their originals (IMG_xxxx). The original photo will be preserved as well as the adjustments file (.AAE) if one is selected.
+                                    Automatically detects and groups edited photos (IMG_Exxxx) with their originals (IMG_xxxx). The original photo will be preserved as well as the adjustments file (.aae) if one is selected.
                                 </TooltipContent>
                             </Tooltip>
                         </FieldLabel>
