@@ -1,21 +1,33 @@
 use chrono::Utc;
-use image::{DynamicImage, GenericImageView, ImageFormat};
+use image::GenericImageView;
 use rayon::prelude::*;
 use rusqlite::{params, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
+use std::sync::{atomic, Arc};
 use std::path::{Path, PathBuf};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, async_runtime::spawn_blocking};
 use uuid::Uuid;
 
 use crate::modules::config;
 use crate::modules::utils;
+use crate::modules::migrations;
 
 fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, String> {
     let meta_path = get_library_root_path(app, library_id)?;
+    if !meta_path.exists() {
+        log::error!("Library {} not found", library_id);
+        return Err("notfound".to_string());
+    }
+
     let db_path = meta_path.join("lib.db");
+    if !db_path.exists() {
+        log::error!("Database not found for library {}", library_id);
+        return Err("notfound".to_string());
+    }
+
     Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))
 }
 
@@ -32,7 +44,125 @@ fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, S
             }
         }
     }
-    Err("Library not found".to_string())
+    log::error!("Library {} not found", library_id);
+    Err("notfound".to_string())
+}
+
+#[tauri::command]
+pub fn check_library_health(app: AppHandle, library_id: String, upgrade: Option<bool>) -> Result<bool, String> {
+    let mut library_conn = get_db_connection(&app, &library_id)?;
+
+    let version = library_conn.query_one("PRAGMA user_version", [], |row| row.get::<usize, u32>(0)).map_err(|e| utils::treat(e, "Unable to check library version"))?;
+    let latest = migrations::get_latest_version();
+
+    if version < latest {
+        log::error!("Library {}", upgrade.unwrap_or(false));
+        if upgrade.unwrap_or(false) {
+            migrations::migrate_to_latest(version, &mut library_conn).map(|_| true)
+        } else {
+            Err("outdated".to_string())
+        }
+    } else if version > latest {
+        Err("recent".to_string())
+    } else {
+        Ok(true)
+    }
+}
+
+#[tauri::command]
+pub fn upgrade_library(app: AppHandle, library_id: String) -> Result<bool, String> {
+    check_library_health(app, library_id, Some(true))
+}
+
+#[tauri::command]
+pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path: &str) -> Result<Value, String> {
+    let base = Path::new(path);
+    let full_path = base.to_path_buf();
+    let store = config::get_store(&app)?;
+
+    fs::create_dir_all(&full_path).map_err(|e| utils::treat(e, "Unable to create library at the specified path"))?;
+
+    let conn = Connection::open(full_path.join("lib.db").to_str().unwrap());
+
+    match conn {
+        Ok(conn) => {
+            let _ = fs::create_dir_all(full_path.join("originals"));
+            let _ = fs::create_dir_all(full_path.join("thumbnails"));
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS item (
+                    id TEXT PRIMARY KEY,
+                    original_name TEXT NOT NULL,
+                    file_ext TEXT NOT NULL,
+                    file_type TEXT NOT NULL,
+                    file_size INTEGER NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
+                    duration INTEGER NOT NULL,
+                    checksum TEXT NOT NULL,
+                    is_favorite INTEGER DEFAULT 0,
+                    is_screenshot INTEGER DEFAULT 0,
+                    is_screen_recording INTEGER DEFAULT 0,
+                    live_video TEXT,
+                    raw_original_name TEXT,
+                    raw_file_size INTEGER,
+                    raw_checksum TEXT,
+                    has_adjustments INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL
+                )",
+                [],
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS album (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    parent TEXT,
+                    selected_cover INTEGER NOT NULL,
+                    icon TEXT,
+                    color TEXT,
+                    cover_photo TEXT,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (parent) REFERENCES album (id) ON DELETE CASCADE
+                )",
+                [],
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
+
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS album_item (
+                    album_id TEXT NOT NULL,
+                    item_id TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    PRIMARY KEY (album_id, item_id),
+                    FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
+                    FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
+                )",
+                [],
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
+
+            migrations::label_latest(conn)?;
+        }
+        Err(e) => return Err(e.to_string()),
+    }
+
+    let mut libraries = match store.get("libraries") {
+        Some(Value::Array(arr)) => arr.clone(),
+        _ => vec![],
+    };
+    let value = serde_json::json!({
+        "id": Uuid::new_v4().to_string(),
+        "name": name,
+        "icon": icon,
+        "color": color,
+        "path": path
+    });
+
+    libraries.push(value.clone());
+    store.set("libraries", Value::Array(libraries));
+
+    store.save().map_err(|e| e.to_string())?;
+    Ok(value)
 }
 
 #[tauri::command]
@@ -129,6 +259,8 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     fs::create_dir_all(&originals_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
     let thumbs_dir = library_root.join("thumbnails");
     fs::create_dir_all(&thumbs_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
+    let adjustments_dir = library_root.join("adjustments");
+    fs::create_dir_all(&adjustments_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
 
     let processed_count = std::sync::atomic::AtomicUsize::new(0);
     let app_handle = app.clone();
@@ -136,7 +268,7 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     let results: Result<Vec<utils::Item>, String> = items
         .par_iter()
         .map(|item| {
-            let result = prepare_item(item, &originals_dir, &thumbs_dir, delete_source);
+            let result = prepare_item(item, &originals_dir, &thumbs_dir, &adjustments_dir, delete_source);
             
             let current = processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
             let _ = app_handle.emit("import-progress", current);
@@ -160,13 +292,18 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
                 file_size,
                 width,
                 height,
+                duration,
                 checksum,
                 is_favorite,
                 is_screenshot,
                 is_screen_recording,
                 live_video,
+                raw_original_name,
+                raw_file_size,
+                raw_checksum,
+                has_adjustments,
                 created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)"
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)"
         ).map_err(|e| utils::treat(e, "Unable to prepare statement"))?;
 
         for item in &processed_items {
@@ -178,11 +315,16 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
                 item.file_size,
                 item.width,
                 item.height,
+                item.duration,
                 item.checksum,
                 item.is_favorite as i32,
                 item.is_screenshot as i32,
                 item.is_screen_recording as i32,
                 item.live_video,
+                item.raw_original_name,
+                item.raw_file_size,
+                item.raw_checksum,
+                item.has_adjustments as i32,
                 item.created_at.to_rfc3339()
             ]).map_err(|e| utils::treat(e, "Unable to import item to the library"))?;
         }
@@ -193,7 +335,7 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     Ok(processed_items)
 }
 
-fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_dir: &Path, delete_source: bool) -> Result<utils::Item, String> {
+fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_dir: &Path, adjustments_dir: &Path, delete_source: bool) -> Result<utils::Item, String> {
     let source_path = Path::new(&import_item.source_path);
     if !source_path.exists() {
         return Err(format!("Source file does not exist: {}", import_item.source_path));
@@ -266,11 +408,16 @@ fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_di
         file_size,
         width,
         height,
+        duration,
         checksum,
         is_favorite: false,
         is_screenshot: false,
         is_screen_recording: false,
         live_video: live_video_name,
+        raw_original_name,
+        raw_file_size,
+        raw_checksum,
+        has_adjustments: import_item.aae_record_path.is_some(),
         created_at: Utc::now()
     })
 }

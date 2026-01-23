@@ -40,7 +40,7 @@ function RouteComponent() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: QUICK_EASE, delay: 2.8 }}
                 >
-                    A photo library app that helps you organize your photos and videos
+                    A photo library app that helps you organize your memories
                 </motion.h2>
             </div>
             <div className="w-full mb-12 space-y-6">

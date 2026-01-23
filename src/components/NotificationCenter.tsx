@@ -1,8 +1,8 @@
 import { IconInfoCircle, IconX } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
-import { IconBox } from "@/components/IconBox";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { IconBox } from "@/components/custom/IconBox";
 import { getNotiIcon } from "@/lib/utils";
 import { useNotifications } from "@/lib/useNotifications";
 import type { Notification } from "@/lib/models";
@@ -40,7 +40,7 @@ export function NotificationCenter() {
         <div className="w-full px-2 pt-2.5 pb-0">
             <div className="mb-1 pl-2 pr-0.5 flex justify-between items-center">
                 <h3 className="font-semibold">Notifications</h3>
-                <Button variant="ghost" size="sm" className="h-7 px-2.5 text-xs" onClick={clearAll}>Clear all</Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2.5 text-xs" disabled={notifications.filter(n => n.type !== "promise").length === 0} onClick={clearAll}>Clear all</Button>
             </div>
             <div className="max-h-120 overflow-y-auto">
                 <div className="pb-2 space-y-1">

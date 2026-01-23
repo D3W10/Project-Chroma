@@ -34,9 +34,11 @@ export function useSelection<T extends { id: string | number }>({ items }: UseSe
         setLastIndex(index);
     }
 
-    function unselectAll() {
-        setSelected([]);
-        setLastIndex(-1);
+    function unselectAll(e?: React.MouseEvent) {
+        if (!e || e.currentTarget === e.target || (e.target instanceof HTMLElement && e.target.tagName !== "BUTTON")) {
+            setSelected([]);
+            setLastIndex(-1);
+        }
     }
 
     return {

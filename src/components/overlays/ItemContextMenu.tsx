@@ -1,4 +1,4 @@
-import { IconArchive, IconEyeOff, IconHeart, IconHeartFilled, IconInfoCircle, IconShare2, IconTrash } from "@tabler/icons-react";
+import { IconArchive, IconEyeOff, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconShare2, IconTrash } from "@tabler/icons-react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import type { ReactNode } from "react";
 import type { Item } from "@/lib/models";
@@ -26,6 +26,10 @@ export function ItemContextMenu({ children, selected, onMoveToLib, onSetFavorite
                 <ContextMenuItem onClick={onMoveToLib}>
                     <IconArchive className="size-4.5" />
                     Move to another library
+                </ContextMenuItem>
+                <ContextMenuItem>
+                    <IconFolderPlus className="size-4.5" />
+                    Add to Album
                 </ContextMenuItem>
                 <ContextMenuItem onClick={onSetFavorite}>
                     {selected.length !== 0 && selected.every(p => p.is_favorite) ? (

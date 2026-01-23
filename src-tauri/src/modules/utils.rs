@@ -1,9 +1,14 @@
 use chrono::{DateTime, Utc};
+use image::{DynamicImage, ImageFormat};
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use log;
 use rusqlite::Row;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
+use std::fs;
+use std::path::Path;
+use tauri::AppHandle;
+use tauri_plugin_shell::ShellExt;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Item {
@@ -14,11 +19,16 @@ pub struct Item {
     pub file_size: u64,
     pub width: u32,
     pub height: u32,
+    pub duration: u64,
     pub checksum: String,
     pub is_favorite: bool,
     pub is_screenshot: bool,
     pub is_screen_recording: bool,
     pub live_video: Option<String>,
+    pub raw_original_name: Option<String>,
+    pub raw_file_size: Option<u64>,
+    pub raw_checksum: Option<String>,
+    pub has_adjustments: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -46,6 +56,9 @@ pub struct AlbumItem {
 pub struct ImportItem {
     pub source_path: String,
     pub live_video_path: Option<String>,
+    pub original_source_path: Option<String>,
+    pub original_live_video_path: Option<String>,
+    pub aae_record_path: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -120,12 +133,17 @@ pub fn deserialize_item(row: &Row<'_>) -> Result<Item, rusqlite::Error> {
         file_size: row.get(4)?,
         width: row.get(5)?,
         height: row.get(6)?,
-        checksum: row.get(7)?,
-        is_favorite: row.get::<_, i32>(8)? != 0,
-        is_screenshot: row.get::<_, i32>(9)? != 0,
-        is_screen_recording: row.get::<_, i32>(10)? != 0,
-        live_video: row.get::<_, Option<String>>(11)?,
-        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(12)?).unwrap().with_timezone(&Utc),
+        duration: row.get(7)?,
+        checksum: row.get(8)?,
+        is_favorite: row.get::<_, i32>(9)? != 0,
+        is_screenshot: row.get::<_, i32>(10)? != 0,
+        is_screen_recording: row.get::<_, i32>(11)? != 0,
+        live_video: row.get::<_, Option<String>>(12)?,
+        raw_original_name: row.get::<_, Option<String>>(13)?,
+        raw_file_size: row.get::<_, Option<u64>>(14)?,
+        raw_checksum: row.get::<_, Option<String>>(15)?,
+        has_adjustments: row.get::<_, i32>(16)? != 0,
+        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(17)?).unwrap().with_timezone(&Utc),
     })
 }
 
@@ -141,4 +159,76 @@ pub fn deserialize_album(row: &Row<'_>) -> Result<Album, rusqlite::Error> {
         cover_photo: row.get(7)?,
         created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).unwrap().with_timezone(&Utc),
     })
+}
+
+pub fn generate_image_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), String> {
+    let thumb = img.thumbnail(512, 512);
+
+    let mut out_file = fs::File::create(output_path).map_err(|e| treat(e, "Unable to generate thumbnail"))?;
+    thumb.write_to(&mut out_file, ImageFormat::WebP).map_err(|e| treat(e, "Unable to write thumbnail"))?;
+
+    Ok(())
+}
+
+pub fn generate_video_thumbnail(app: &AppHandle, input: &Path, output: &Path) -> Result<(), String> {
+    let input_str = input.to_string_lossy().to_string();
+    let output_str = output.to_string_lossy().to_string();
+
+    let sidecar_command = app.shell()
+        .command("ffmpeg")
+        .args([
+            "-y",
+            "-i", &input_str,
+            "-vf", "thumbnail,scale=512:512:force_original_aspect_ratio=decrease",
+            "-frames:v", "1",
+            &output_str
+        ]);
+
+    let output = tauri::async_runtime::block_on(async move {
+        sidecar_command.output().await
+    }).map_err(|e| treat(e, "Failed to execute ffmpeg"))?;
+
+    if !output.status.success() {
+        return Err(format!("ffmpeg failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    Ok(())
+}
+
+pub fn get_video_metadata(app: &AppHandle, path: &Path) -> Result<(u32, u32, u64), String> {
+    let path_str = path.to_string_lossy().to_string();
+
+    let sidecar_command = app.shell()
+        .command("ffprobe")
+        .args([
+            "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height,duration",
+            "-of", "csv=s=x:p=0",
+            &path_str
+        ]);
+
+    let output = tauri::async_runtime::block_on(async move {
+        sidecar_command.output().await
+    }).map_err(|e| treat(e, "Failed to execute ffprobe"))?;
+
+    if !output.status.success() {
+        return Err(format!("ffprobe failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let parts: Vec<&str> = stdout.split('x').collect();
+
+    if parts.len() >= 2 {
+        let width = parts[0].parse::<u32>().unwrap_or(0);
+        let height = parts[1].parse::<u32>().unwrap_or(0);
+        let duration = if parts.len() >= 3 {
+            parts[2].parse::<f64>().unwrap_or(0.0) as u64
+        } else {
+            0
+        };
+        Ok((width, height, duration))
+    } else {
+        Ok((0, 0, 0))
+    }
 }

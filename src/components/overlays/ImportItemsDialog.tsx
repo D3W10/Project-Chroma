@@ -3,22 +3,24 @@ import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconHelpCircle, IconPhotoVideo } from "@tabler/icons-react";
-import { DialogPaged, useDialogPaged } from "@/components/DialogPaged";
-import { IconBox } from "@/components/IconBox";
-import { Spinner } from "@/components/Spinner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSeparator, FieldSet, FieldTitle } from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { DialogPaged, useDialogPaged } from "@/components/custom/DialogPaged";
+import { IconBox } from "@/components/custom/IconBox";
 import { verifyConflicts, addItems } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
+import { unwrapResult } from "@/lib/utils";
 import type { Conflict, ImportItem } from "@/lib/models";
 
 interface ImportOptions {
     livePhotos: boolean;
+    edits: boolean;
     deleteImported: boolean;
     ignoreImported: boolean;
 }
@@ -34,8 +36,12 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
     async function handleImportRequest(opts: ImportOptions, setPage: (page: string) => unknown) {
         if (!selectedLibrary) return;
 
-        if (opts.livePhotos) {
-            const { data: result, error } = await verifyConflicts({ sourcePaths: selectedItems});
+        if (opts.livePhotos || opts.edits) {
+            const { data: result, error } = await verifyConflicts({
+                sourcePaths: selectedItems,
+                checkLivePhotos: opts.livePhotos,
+                parseEdits: opts.edits,
+            });
 
             if (error || !result) {
                 pushNoti("Scan Error", "Failed to scan files", "error");
@@ -63,14 +69,14 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
 
         onOpenChange(false);
 
-        const promise = addItems({ libraryId: selectedLibrary.id, items, deleteSource: deleteImported });
+        const promise = unwrapResult(addItems({ libraryId: selectedLibrary.id, items, deleteSource: deleteImported }));
 
         const importNoti = pushNoti("Importing items", "Importing " + items.length + " items", "promise", {
             promise,
             hasProgress: true,
             peek: "Importing " + items.length + " items",
-            success: { title: "Import success", description: items.length + " items added successfully" },
-            error: { title: "Error importing", description: "An error occurred while importing the selected items" },
+            success: () => ({ title: "Import success", description: items.length + " items added successfully" }),
+            error: e => ({ title: "Error importing", description: "An error occurred while importing the selected items: " + e }),
             onSuccess: () => queryClient.invalidateQueries({ queryKey: ["items"] }),
         });
 
@@ -94,9 +100,10 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
                     node: <LoadingPage onItemsSelected={setSelectedItems} />,
                 },
                 review: {
-                    height: 447,
-                    node: <ReviewPage selectedItems={selectedItems} onStartImport={(opts, setPageContext) => handleImportRequest(opts, setPageContext)} />,
+                    height: 473,
+                    node: <ReviewPage selectedItems={selectedItems} onStartImport={handleImportRequest} />,
                 },
+            }}
             defaultPage="source"
             open={openDialog}
             onOpenChange={onOpenChange}
@@ -169,6 +176,10 @@ function LoadingPage({ onItemsSelected }: { onItemsSelected: (items: string[]) =
                             name: "Videos",
                             extensions: ["mp4", "mov", "avi"],
                         },
+                        {
+                            name: "Adjustments",
+                            extensions: ["aae"],
+                        },
                     ],
                 });
 
@@ -200,6 +211,7 @@ function LoadingPage({ onItemsSelected }: { onItemsSelected: (items: string[]) =
 
 function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[]; onStartImport: (opts: ImportOptions, setPage: (p: string) => void) => void }) {
     const [livePhotos, setLivePhotos] = useState(false);
+    const [edits, setEdits] = useState(false);
     const [deleteImported, setDeleteImported] = useState(false);
     const [ignoreImported, setIgnoreImported] = useState(false);
     const { setPage } = useDialogPaged();
@@ -236,6 +248,20 @@ function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[];
                         </FieldLabel>
                     </Field>
                     <Field orientation="horizontal">
+                        <Checkbox id="optionEdits" checked={edits} onCheckedChange={e => setEdits(!!e)} />
+                        <FieldLabel htmlFor="optionEdits">
+                            Combine edited photos
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <IconHelpCircle className="size-4.5 text-primary" />
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">
+                                    Automatically detects and groups edited photos (IMG_Exxxx) with their originals (IMG_xxxx). The original photo will be preserved as well as the adjustments file (.AAE) if one is selected.
+                                </TooltipContent>
+                            </Tooltip>
+                        </FieldLabel>
+                    </Field>
+                    <Field orientation="horizontal">
                         <Checkbox id="optionDeleteImport" checked={deleteImported} onCheckedChange={e => setDeleteImported(!!e)} />
                         <FieldLabel htmlFor="optionDeleteImport">Delete originals after import</FieldLabel>
                     </Field>
@@ -247,7 +273,7 @@ function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[];
             </FieldSet>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setPage("source", true)}>Back</Button>
-                <Button disabled={!selectedItems.length} onClick={() => onStartImport({ livePhotos, deleteImported, ignoreImported }, setPage)}>Import items</Button>
+                <Button disabled={!selectedItems.length} onClick={() => onStartImport({ livePhotos, edits, deleteImported, ignoreImported }, setPage)}>Import items</Button>
             </DialogFooter>
         </>
     );

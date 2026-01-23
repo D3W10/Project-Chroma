@@ -2,14 +2,13 @@ import { clsx, type ClassValue } from "clsx";
 import { cva as cvaOriginal } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 import { IconAlertTriangle, IconCircleCheck, IconExclamationCircle, IconInfoCircle } from "@tabler/icons-react";
-import { Spinner } from "@/components/Spinner";
-import { useNotifications } from "@/lib/useNotifications";
+import { Spinner } from "@/components/ui/spinner";
 import type { Easing } from "motion/react";
 import type { Notification } from "@/lib/models";
 
 type Success<T> = { data: T; error: null };
 type Failure<E> = { data: null; error: E };
-type Result<T, E = Error> = Success<T> | Failure<E>;
+type Result<T, E = string> = Success<T> | Failure<E>;
 
 export const QUICK_EASE: Easing = [0.22, 1, 0.36, 1];
 
@@ -19,13 +18,21 @@ export function cn(...inputs: ClassValue[]) {
 
 export const cva = cvaOriginal;
 
-export async function tryCatch<T, E = Error>(fn: () => Promise<T>): Promise<Result<T, E>> {
+export async function tryCatch<T, E = string>(fn: () => Promise<T>): Promise<Result<T, E>> {
     try {
         return { data: await fn(), error: null };
     } catch (err) {
-        useNotifications.getState().pushNoti("Something went wrong", err instanceof Error ? err.message : typeof err === "string" ? err : undefined, "error");
         return { data: null, error: err as E };
     }
+}
+
+export function unwrapResult<T, E = string>(result: Promise<Result<T, E>>): Promise<T> {
+    return new Promise((resolve, reject) => result.then(e => {
+        if (e.data)
+            resolve(e.data);
+        else
+            reject(e.error);
+    }));
 }
 
 export function getNotiIcon(type: Notification["type"]) {

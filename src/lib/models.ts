@@ -14,11 +14,16 @@ export interface Item {
     file_size: number;
     width: number;
     height: number;
+    duration: number;
     checksum: string;
     is_favorite: boolean;
     is_screenshot: boolean;
     is_screen_recording: boolean;
     live_video?: string;
+    raw_original_name?: string;
+    raw_file_size?: number;
+    raw_checksum?: string;
+    has_adjustments: boolean;
     created_at: string;
 }
 
@@ -37,6 +42,9 @@ export interface Album {
 export interface ImportItem {
     source_path: string;
     live_video_path: string | null;
+    original_source_path?: string;
+    original_live_video_path?: string;
+    aae_record_path?: string;
 }
 
 export interface ImportCandidate {

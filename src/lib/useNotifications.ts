@@ -5,7 +5,7 @@ import type { Notification, NotificationType } from "./models";
 interface NotificationStore {
     notifications: Notification[];
     isOpen: boolean;
-    pushNoti: (title: string, description?: string, type?: NotificationType, options?: NotificationPromiseOptions) => string;
+    pushNoti: <T, E = string>(title: string, description?: string, type?: NotificationType, options?: NotificationPromiseOptions<T, E>) => string;
     updateNoti: (id: string, updates: Partial<Notification>) => void;
     progressNoti: (id: string, progress: number) => void;
     clearNoti: (id: string) => void;
@@ -14,18 +14,18 @@ interface NotificationStore {
     getPeekNotification: () => Notification | null;
 }
 
-interface NotificationPromiseOptions {
-    promise?: Promise<unknown>;
+interface NotificationPromiseOptions<T, E = string> {
+    promise?: Promise<T>;
     hasProgress?: boolean;
     peek?: string;
-    success?: {
+    success?: ((data: T) => {
         title: string;
         description: string;
-    };
-    error?: {
+    });
+    error?: ((error: E) => {
         title: string;
         description: string;
-    };
+    });
     onSuccess?: () => unknown;
     onError?: () => unknown;
 }
@@ -34,7 +34,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
     notifications: [],
     isOpen: false,
 
-    pushNoti: (title: string, description?: string, type: NotificationType = "info", { promise, hasProgress = false, peek, success, error, onSuccess, onError }: NotificationPromiseOptions = {}) => {
+    pushNoti: <T, E = string>(title: string, description?: string, type: NotificationType = "info", { promise, hasProgress = false, peek, success, error, onSuccess, onError }: NotificationPromiseOptions<T, E> = {}) => {
         const id = self.crypto.randomUUID();
         const notification: Notification = {
             id,
@@ -69,18 +69,24 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             console.log("[PROM] " + title + " - " + description);
 
             if (promise) {
-                promise.then(() => {
-                    const data = { title, description, ...success };
-                    get().updateNoti(id, { type: "success", ...success });
+                let data = { title, description };
+
+                promise.then(e => {
+                    const override = success?.(e);
+                    data = { ...data, ...override };
+                    get().updateNoti(id, { type: "success", ...override });
 
                     const currentIsOpen = get().isOpen;
                     if (!currentIsOpen) toast.success(data.title, data.description ? { description: data.description } : undefined);
                     console.log("[SUCC] " + data.title + " - " + data.description);
 
                     onSuccess?.();
-                }).catch(() => {
-                    const data = { title, description, ...error };
-                    get().updateNoti(id, { type: "error", ...error });
+                }).catch(e => {
+                    if (e) {
+                        const override = error?.(e);
+                        data = { ...data, ...override };
+                        get().updateNoti(id, { type: "error", ...override });
+                    }
 
                     const currentIsOpen = get().isOpen;
                     if (!currentIsOpen) toast.error(data.title, data.description ? { description: data.description } : undefined);
@@ -94,7 +100,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
         return id;
     },
 
-    updateNoti: (id: string, updates: Partial<Notification>) => {
+    updateNoti: (id, updates) => {
         set(state => ({
             notifications: state.notifications.map(notification =>
                 notification.id === id ? { ...notification, ...updates } : notification,
@@ -102,7 +108,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
         }));
     },
 
-    progressNoti: (id: string, progress: number) => {
+    progressNoti: (id, progress) => {
         set(state => ({
             notifications: state.notifications.map(notification =>
                 notification.id === id ? { ...notification, progress } : notification,
@@ -110,7 +116,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
         }));
     },
 
-    clearNoti: (id: string) => {
+    clearNoti: id => {
         if (get().notifications.find(noti => noti.id === id)?.type === "promise") return;
 
         set(state => ({
@@ -124,7 +130,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
         }));
     },
 
-    setIsOpen: (open: boolean) => {
+    setIsOpen: open => {
         set({ isOpen: open });
     },
 

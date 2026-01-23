@@ -1,12 +1,7 @@
-use log;
-use rusqlite::Connection;
 use serde_json::Value;
-use std::fs;
-use std::path::{Path};
 use std::sync::Arc;
 use tauri::{AppHandle, Wry};
 use tauri_plugin_store::{Store, StoreExt};
-use uuid::Uuid;
 
 use crate::modules::utils;
 
@@ -26,114 +21,6 @@ pub fn get_libraries(app: AppHandle) -> Result<Value, String> {
     } else {
         Ok(Value::Array(vec![]))
     }
-}
-
-#[tauri::command]
-pub fn check_library_path(app: AppHandle, library_id: String) -> Result<bool, String> {
-    let store = get_store(&app)?;
-    let libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr,
-        _ => vec![],
-    };
-    for lib in libraries {
-        if lib.get("id").and_then(|v| v.as_str()) == Some(library_id.as_str()) {
-            if let Some(path) = lib.get("path").and_then(|v| v.as_str()) {
-                let base_path = Path::new(path);
-                let db_path = base_path.join("lib.db");
-
-                return Ok(base_path.exists() && db_path.exists());
-            }
-        }
-    }
-    log::error!("Library {} not found", library_id);
-    Err("Library not found".to_string())
-}
-
-#[tauri::command]
-pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path: &str) -> Result<Value, String> {
-    let base = Path::new(path);
-    let full_path = base.to_path_buf();
-    let store = get_store(&app)?;
-
-    match fs::create_dir_all(&full_path) {
-        Ok(_) => println!("Library created successfully"),
-        Err(e) => println!("Error creating library: {}", e),
-    }
-
-    let conn = Connection::open(full_path.join("lib.db").to_str().unwrap());
-
-    match conn {
-        Ok(conn) => {
-            let _ = fs::create_dir_all(full_path.join("originals"));
-            let _ = fs::create_dir_all(full_path.join("thumbnails"));
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS item (
-                    id TEXT PRIMARY KEY,
-                    original_name TEXT NOT NULL,
-                    file_ext TEXT NOT NULL,
-                    file_type TEXT NOT NULL,
-                    file_size INTEGER NOT NULL,
-                    width INTEGER NOT NULL,
-                    height INTEGER NOT NULL,
-                    checksum TEXT NOT NULL,
-                    is_favorite INTEGER DEFAULT 0,
-                    is_screenshot INTEGER DEFAULT 0,
-                    is_screen_recording INTEGER DEFAULT 0,
-                    live_video TEXT,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    parent TEXT,
-                    selected_cover INTEGER NOT NULL,
-                    icon TEXT,
-                    color TEXT,
-                    cover_photo TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (parent) REFERENCES album (id) ON DELETE CASCADE
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album_item (
-                    album_id TEXT NOT NULL,
-                    item_id TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    PRIMARY KEY (album_id, item_id),
-                    FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
-                    FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-        }
-        Err(e) => return Err(e.to_string()),
-    }
-
-    let mut libraries = match store.get("libraries") {
-        Some(Value::Array(arr)) => arr.clone(),
-        _ => vec![],
-    };
-    let value = serde_json::json!({
-        "id": Uuid::new_v4().to_string(),
-        "name": name,
-        "icon": icon,
-        "color": color,
-        "path": path
-    });
-
-    libraries.push(value.clone());
-    store.set("libraries", Value::Array(libraries));
-
-    store.save().map_err(|e| e.to_string())?;
-    Ok(value)
 }
 
 #[tauri::command]

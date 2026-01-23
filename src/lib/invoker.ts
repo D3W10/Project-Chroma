@@ -10,8 +10,8 @@ export function createLibrary(opts: { name: string; icon: string; color: string;
     return tryCatch(() => invoke<Library>("create_library", opts));
 }
 
-export function checkLibraryPath(opts: { libraryId: string }) {
-    return tryCatch(() => invoke<boolean>("check_library_path", opts));
+export function checkLibraryHealth(opts: { libraryId: string }) {
+    return tryCatch(() => invoke<boolean>("check_library_health", opts));
 }
 
 export function updateLibraryPath(opts: { libraryId: string; newPath: string }) {
@@ -34,7 +34,7 @@ export function getItems(opts: { libraryId: string }) {
     return tryCatch(() => invoke<Item[]>("get_items", opts));
 }
 
-export function verifyConflicts(opts: { sourcePaths: string[] }) {
+export function verifyConflicts(opts: { sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }) {
     return tryCatch(() => invoke<ImportCandidate>("verify_conflicts", opts));
 }
 
@@ -48,6 +48,10 @@ export function deleteItems(opts: { libraryId: string; itemIds: string[] }) {
 
 export function setItemsFavorite(opts: { libraryId: string; itemIds: string[]; value: boolean }) {
     return tryCatch(() => invoke("set_items_favorite", opts));
+}
+
+export function getAlbums(opts: { libraryId: string; parent?: string }) {
+    return tryCatch(() => invoke<Album[]>("get_albums", opts));
 }
 
 export function addPhotoToAlbum(opts: { libraryId: string; albumId: string; photoId: string }) {
