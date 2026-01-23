@@ -10,6 +10,10 @@ export function createLibrary(opts: { name: string; icon: string; color: string;
     return tryCatch(() => invoke<Library>("create_library", opts));
 }
 
+export function upgradeLibrary(opts: { libraryId: string }) {
+    return tryCatch(() => invoke<boolean>("upgrade_library", opts));
+}
+
 export function checkLibraryHealth(opts: { libraryId: string }) {
     return tryCatch(() => invoke<boolean>("check_library_health", opts));
 }
