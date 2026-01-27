@@ -6,18 +6,18 @@ import { animate } from "@/components/animated";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { AlbumCover } from "@/components/custom/AlbumCover";
 import { IconBox } from "@/components/custom/IconBox";
-import { IconColor } from "@/components/custom/IconColor";
 import { AlbumContextMenu } from "@/components/overlays/AlbumContextMenu";
 import { CreateAlbumDialog } from "@/components/overlays/CreateAlbumDialog";
-import { getAlbums } from "@/lib/invoker";
+import { getAlbumItems, getAlbums } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { useSelection } from "@/lib/useSelection";
+import { useSettings } from "@/lib/useSettings";
+import { useStack } from "@/lib/useStack";
 import { cva } from "@/lib/utils";
-import type { Album } from "@/lib/models";
-
-type Layout = "card" | "grid" | "list";
+import type { Album, ItemAlbumRef } from "@/lib/models";
 
 export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
@@ -54,15 +54,22 @@ function RouteComponent() {
     const { id } = Route.useParams();
     const queryClient = useQueryClient();
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: albums });
+    const { settings, updateSettings } = useSettings();
+    const stack = useStack<string>();
 
     const { isPending, data } = useQuery({
-        queryKey: ["albums", selectedLibrary?.id, id],
+        queryKey: [selectedLibrary?.id, "albums", id],
         queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
     });
 
     function onCreateSuccess(album: Album) {
-        queryClient.invalidateQueries({ queryKey: ["albums", selectedLibrary?.id, id] });
+        queryClient.invalidateQueries({ queryKey: [selectedLibrary?.id, "albums", id] });
         pushNoti("Album created", "The album \"" + album.name + "\" was created successfully!", "success");
+    }
+
+    function onNavigate(album: Album) {
+        stack.push(id ?? "");
+        navigate({ to: "/albums/" + album.id });
     }
 
     useEffect(() => {
@@ -88,8 +95,8 @@ function RouteComponent() {
                         <IconFolderPlus className="size-4 mr-0.5" />
                         Create album
                     </Button>
-                    {id && (
-                        <Button variant="outline" size="icon">
+                    {stack.length > 0 && (
+                        <Button variant="outline" size="icon" onClick={() => navigate({ to: "/albums/" + stack.pop() })}>
                             <IconChevronLeft className="size-5" />
                         </Button>
                     )}
@@ -102,19 +109,19 @@ function RouteComponent() {
                         </Button>
                     </ButtonGroup>
                     <ButtonGroup>
-                        <Button variant={viewmode === "card" ? "default" : "outline"} size="icon" onClick={() => setViewmode("card")}>
+                        <Button variant={settings.albumLayout === "card" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "card" })}>
                             <IconLayoutGrid className="size-5" />
                         </Button>
-                        <Button variant={viewmode === "grid" ? "default" : "outline"} size="icon" onClick={() => setViewmode("grid")}>
+                        <Button variant={settings.albumLayout === "grid" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "grid" })}>
                             <IconGridDots className="size-5" />
                         </Button>
-                        <Button variant={viewmode === "list" ? "default" : "outline"} size="icon" onClick={() => setViewmode("list")}>
+                        <Button variant={settings.albumLayout === "list" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "list" })}>
                             <IconListDetails className="size-5" />
                         </Button>
                     </ButtonGroup>
                 </div>
             </div>
-            <div className={gridStyles({ layout: viewmode, grid: isPending || albums.length > 0 })}>
+            <div className={gridStyles({ layout: settings.albumLayout, grid: isPending || albums.length > 0 })}>
                 {isPending && <GridLoading />}
                 {albums.length > 0 ? albums.map((p, i) => (
                     <AlbumContextMenu
@@ -126,9 +133,9 @@ function RouteComponent() {
                         <GridItem
                             item={p}
                             selected={!!selected.find(s => s.id === p.id)}
-                            viewmode={viewmode}
+                            viewmode={settings.albumLayout}
                             onClick={e => handleSelect(e, i, p)}
-                            onDoubleClick={() => navigate({ to: `/albums/${p.id}` })}
+                            onDoubleClick={() => onNavigate(p)}
                             onContextMenu={() => handleRightClick(i, p)}
                         />
                     </AlbumContextMenu>
@@ -202,21 +209,21 @@ function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextM
         <div className={gridItemStyles({ layout: viewmode, selected })} onClick={onClick} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
             {viewmode === "card" ? (
                 <>
-                    <div className="grid grid-cols-5 grid-rows-2 grid-flow-col">
-                        <div className="w-full bg-red-100 aspect-square"></div>
-                        <div className="w-full bg-red-200 aspect-square"></div>
-                        <div className="w-full bg-red-300 aspect-square"></div>
-                        <div className="w-full bg-red-400 aspect-square"></div>
-                        <div className="w-full bg-red-500 aspect-square"></div>
-                        <div className="w-full bg-red-600 aspect-square"></div>
-                        <div className="w-full bg-red-700 aspect-square"></div>
-                        <div className="w-full bg-red-800 aspect-square"></div>
-                        <div className="w-full bg-red-900 aspect-square"></div>
-                        <div className="w-full bg-red-950 aspect-square"></div>
+                    <div className="grid grid-cols-5 grid-rows-2 grid-flow-col aspect-5/2">
+                        <div className="w-full bg-muted aspect-square"></div>
+                        <div className="w-full bg-muted/90 aspect-square"></div>
+                        <div className="w-full bg-muted/80 aspect-square"></div>
+                        <div className="w-full bg-muted/70 aspect-square"></div>
+                        <div className="w-full bg-muted/60 aspect-square"></div>
+                        <div className="w-full bg-muted/50 aspect-square"></div>
+                        <div className="w-full bg-muted/40 aspect-square"></div>
+                        <div className="w-full bg-muted/30 aspect-square"></div>
+                        <div className="w-full bg-muted/20 aspect-square"></div>
+                        <div className="w-full bg-muted/10 aspect-square"></div>
                     </div>
                     <div className="pl-4 pb-5 flex items-center relative">
                         <div className="p-0.5 absolute bg-background rounded-xl z-1">
-                            <GridItemCover item={item} size="xl" />
+                            <AlbumCover item={item} size="xl" />
                         </div>
                     </div>
                     <div className="px-4.5 py-4">
@@ -226,23 +233,15 @@ function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextM
                 </>
             ) : viewmode === "grid" ? (
                 <>
-                    <GridItemCover item={item} size="xl" />
+                    <AlbumCover item={item} size="xl" />
                     <h3 className="text-lg font-semibold">{item.name}</h3>
                 </>
             ) : (
                 <>
-                    <GridItemCover item={item} />
+                    <AlbumCover item={item} />
                     <h3 className="text-lg font-semibold">{item.name}</h3>
                 </>
             )}
         </div>
-    );
-}
-
-function GridItemCover({ item, size = "lg" }: { item: Album; size?: "default" | "lg" | "xl" }) {
-    return item.selected_cover === 0 ? (
-        <IconColor color={item.color!} size={size}>{item.icon}</IconColor>
-    ) : (
-        <div></div>
     );
 }

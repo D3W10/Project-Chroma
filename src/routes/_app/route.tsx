@@ -25,7 +25,7 @@ function RouteComponent() {
     const queryClient = useQueryClient();
 
     const { isPending, data: libraryExists } = useQuery({
-        queryKey: ["library-path", selectedLibrary?.id],
+        queryKey: [selectedLibrary?.id, "library-health"],
         queryFn: () => checkLibraryHealth({ libraryId: selectedLibrary?.id ?? "" }),
         enabled: !!selectedLibrary?.id,
         retry: false,
@@ -54,7 +54,7 @@ function RouteComponent() {
                     description: "The library \"" + selectedLibrary.name + "\" could not be upgraded due to an internal error.",
                 }),
                 onSuccess: () => {
-                    queryClient.invalidateQueries({ queryKey: ["library-path", selectedLibrary.id] });
+                    queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "library-health"] });
                     setMigrating(false);
                 },
                 onError: () => setMigrating(false),

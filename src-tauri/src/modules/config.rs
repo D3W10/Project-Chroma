@@ -79,3 +79,21 @@ pub fn set_selected_library(app: AppHandle, library_id: Option<String>) -> Resul
     save_store(store)?;
     Ok(())
 }
+
+#[tauri::command]
+pub fn get_settings(app: AppHandle) -> Result<Value, String> {
+    let store = get_store(&app)?;
+    if let Some(v) = store.get("settings") {
+        Ok(v.clone())
+    } else {
+        Ok(serde_json::json!({}))
+    }
+}
+
+#[tauri::command]
+pub fn set_settings(app: AppHandle, settings: Value) -> Result<(), String> {
+    let store = get_store(&app)?;
+    store.set("settings", settings);
+    save_store(store)?;
+    Ok(())
+}

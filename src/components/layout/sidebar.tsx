@@ -20,7 +20,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
 
                 return (
                     <Link key={item.path} to={item.path}>
-                        <Button variant="ghost" className={cn("w-full h-auto py-3 flex-col gap-1", !isActive ? "text-muted-foreground" : "ring-1 ring-border shadow-lg shadow-primary/15")}>
+                        <Button variant="ghost" className={cn("w-full h-auto px-2 py-3 flex-col gap-1", !isActive ? "text-muted-foreground" : "ring-1 ring-border shadow-lg shadow-primary/15")}>
                             <Icon className={`size-7 ${isActive ? "text-primary" : ""}`} />
                             <span className="text-sm">{item.label}</span>
                         </Button>

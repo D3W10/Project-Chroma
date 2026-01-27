@@ -15,6 +15,7 @@ import { IconBox } from "@/components/custom/IconBox";
 import { verifyConflicts, addItems } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
+import { useSettings } from "@/lib/useSettings";
 import { unwrapResult } from "@/lib/utils";
 import type { Conflict, ImportItem } from "@/lib/models";
 
@@ -22,7 +23,6 @@ interface ImportOptions {
     livePhotos: boolean;
     edits: boolean;
     deleteImported: boolean;
-    ignoreImported: boolean;
 }
 
 export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: boolean; onOpenChange: (open: boolean) => void }) {
@@ -77,7 +77,7 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
             peek: "Importing " + items.length + " items",
             success: () => ({ title: "Import success", description: items.length + " items added successfully" }),
             error: e => ({ title: "Error importing", description: "An error occurred while importing the selected items: " + e }),
-            onSuccess: () => queryClient.invalidateQueries({ queryKey: ["items"] }),
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "items"] }),
         });
 
         const unlisten = await listen<number>("import-progress", event => {
@@ -94,13 +94,13 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
                     height: 324,
                     node: <SourcePage />,
                 },
-                loading: {
+                select: {
                     height: 304,
                     closeable: false,
-                    node: <LoadingPage onItemsSelected={setSelectedItems} />,
+                    node: <SelectPage onItemsSelected={setSelectedItems} />,
                 },
                 review: {
-                    height: 473,
+                    height: 442,
                     node: <ReviewPage selectedItems={selectedItems} onStartImport={handleImportRequest} />,
                 },
             }}
@@ -117,7 +117,7 @@ function SourcePage() {
 
     async function next() {
         if (selectedSource === 0)
-            setPage("loading");
+            setPage("select");
     }
 
     return (
@@ -158,7 +158,7 @@ function SourcePage() {
     );
 }
 
-function LoadingPage({ onItemsSelected }: { onItemsSelected: (items: string[]) => unknown }) {
+function SelectPage({ onItemsSelected }: { onItemsSelected: (items: string[]) => unknown }) {
     const { setPage } = useDialogPaged();
     const { pushNoti } = useNotifications();
 
@@ -210,11 +210,19 @@ function LoadingPage({ onItemsSelected }: { onItemsSelected: (items: string[]) =
 }
 
 function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[]; onStartImport: (opts: ImportOptions, setPage: (p: string) => void) => void }) {
-    const [livePhotos, setLivePhotos] = useState(false);
-    const [edits, setEdits] = useState(false);
+    const { settings, updateSettings } = useSettings();
+    const [livePhotos, setLivePhotos] = useState(settings.importOptions.livePhotos);
+    const [edits, setEdits] = useState(settings.importOptions.edits);
     const [deleteImported, setDeleteImported] = useState(false);
-    const [ignoreImported, setIgnoreImported] = useState(false);
     const { setPage } = useDialogPaged();
+
+    function handleImport() {
+        updateSettings({ importOptions: {
+            livePhotos,
+            edits,
+        } });
+        onStartImport({ livePhotos, edits, deleteImported }, setPage);
+    }
 
     return (
         <>
@@ -265,15 +273,11 @@ function ReviewPage({ selectedItems, onStartImport }: { selectedItems: string[];
                         <Checkbox id="optionDeleteImport" checked={deleteImported} onCheckedChange={e => setDeleteImported(!!e)} />
                         <FieldLabel htmlFor="optionDeleteImport">Delete originals after import</FieldLabel>
                     </Field>
-                    <Field orientation="horizontal">
-                        <Checkbox id="optionIgnoreImported" checked={ignoreImported} onCheckedChange={e => setIgnoreImported(!!e)} />
-                        <FieldLabel htmlFor="optionIgnoreImported">Ignore already imported items</FieldLabel>
-                    </Field>
                 </FieldGroup>
             </FieldSet>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setPage("source", true)}>Back</Button>
-                <Button disabled={!selectedItems.length} onClick={() => onStartImport({ livePhotos, edits, deleteImported, ignoreImported }, setPage)}>Import items</Button>
+                <Button disabled={!selectedItems.length} onClick={handleImport}>Import items</Button>
             </DialogFooter>
         </>
     );

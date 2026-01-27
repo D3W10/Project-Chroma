@@ -35,7 +35,10 @@ export function useSelection<T extends { id: string | number }>({ items }: UseSe
     }
 
     function unselectAll(e?: React.MouseEvent) {
-        if (!e || e.currentTarget === e.target || (e.target instanceof HTMLElement && e.target.tagName !== "BUTTON")) {
+        const contextMenu = document.body.querySelector("[data-slot='context-menu-content']");
+        const dialog = document.body.querySelector("[data-slot='dialog-content']");
+
+        if (!e || e.currentTarget === e.target || (e.target instanceof HTMLElement && e.target.tagName !== "BUTTON" && !contextMenu?.contains(e.target) && !dialog?.contains(e.target))) {
             setSelected([]);
             setLastIndex(-1);
         }

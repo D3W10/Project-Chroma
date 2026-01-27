@@ -33,6 +33,13 @@ pub struct Item {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ItemAlbumRef {
+    #[serde(flatten)]
+    pub item: Item,
+    pub added_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Album {
     pub id: String,
     pub name: String,
@@ -144,6 +151,13 @@ pub fn deserialize_item(row: &Row<'_>) -> Result<Item, rusqlite::Error> {
         raw_checksum: row.get::<_, Option<String>>(15)?,
         has_adjustments: row.get::<_, i32>(16)? != 0,
         created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(17)?).unwrap().with_timezone(&Utc),
+    })
+}
+
+pub fn deserialize_item_album_ref(row: &Row<'_>) -> Result<ItemAlbumRef, rusqlite::Error> {
+    Ok(ItemAlbumRef {
+        item: deserialize_item(row)?,
+        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(18)?).unwrap().with_timezone(&Utc),
     })
 }
 

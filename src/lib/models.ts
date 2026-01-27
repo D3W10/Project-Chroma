@@ -27,6 +27,10 @@ export interface Item {
     created_at: string;
 }
 
+export interface ItemAlbumRef extends Item {
+    added_at: string;
+}
+
 export interface Album {
     id: string;
     name: string;
@@ -69,3 +73,14 @@ export interface Notification {
 }
 
 export type NotificationType = "info" | "success" | "error" | "warning" | "promise";
+
+export type Settings = {
+    theme: "dark" | "light";
+    libraryZoom: number;
+    libraryExpanded: boolean;
+    albumLayout: "card" | "grid" | "list";
+    importOptions: {
+        livePhotos: boolean;
+        edits: boolean;
+    };
+};

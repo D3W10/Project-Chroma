@@ -7,11 +7,12 @@ interface ItemContextMenuProps {
     children: ReactNode;
     selected: Item[];
     onMoveToLib: () => void;
+    onAddToAlbum: () => void;
     onSetFavorite: () => void;
     onDelete: () => void;
 }
 
-export function ItemContextMenu({ children, selected, onMoveToLib, onSetFavorite, onDelete }: ItemContextMenuProps) {
+export function ItemContextMenu({ children, selected, onMoveToLib, onAddToAlbum, onSetFavorite, onDelete }: ItemContextMenuProps) {
     return (
         <ContextMenu>
             <ContextMenuTrigger className="contents">
@@ -27,7 +28,7 @@ export function ItemContextMenu({ children, selected, onMoveToLib, onSetFavorite
                     <IconArchive className="size-4.5" />
                     Move to another library
                 </ContextMenuItem>
-                <ContextMenuItem>
+                <ContextMenuItem onClick={onAddToAlbum}>
                     <IconFolderPlus className="size-4.5" />
                     Add to Album
                 </ContextMenuItem>

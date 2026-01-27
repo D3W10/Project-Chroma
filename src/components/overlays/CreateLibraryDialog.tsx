@@ -98,7 +98,7 @@ export function CreateLibraryDialog({ open, onOpenChange }: CreateLibraryDialogP
                             <FieldLabel htmlFor="libraryLocation">Location</FieldLabel>
                             <div id="libraryLocation" className="flex gap-2">
                                 <Button variant="outline" disabled={isProcessing} onClick={selectLocation}>Select Location</Button>
-                                <div className="px-3 py-2 flex-1 rounded-md text-secondary-foreground text-sm font-mono ring-1 ring-input select-text overflow-x-auto">
+                                <div className="px-3 pt-2 pb-1 flex-1 rounded-md text-secondary-foreground text-sm font-mono ring-1 ring-input select-text overflow-x-auto overflow-y-hidden">
                                     {libraryLocation}
                                 </div>
                             </div>

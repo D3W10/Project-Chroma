@@ -43,6 +43,7 @@ export default tseslint.config([
             "@stylistic/arrow-parens": ["warn", "as-needed"],
             "@stylistic/multiline-ternary": ["off"],
             "@stylistic/jsx-one-expression-per-line": ["warn", { allow: "single-line" }],
+            "@stylistic/no-mixed-operators": ["off"],
         },
     },
 ]);

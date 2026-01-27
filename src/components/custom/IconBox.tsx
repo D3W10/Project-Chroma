@@ -2,7 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const iconBoxVariants = cva(
-    "flex bg-muted border-secondary inset-shadow-center drop-shadow-2xl drop-shadow-primary/15 ring ring-border/50 transform-gpu *:size-full",
+    "flex text-secondary-foreground bg-muted border-secondary inset-shadow-center dark:inset-shadow-center-dark drop-shadow-2xl drop-shadow-primary/15 ring ring-border/50 transform-gpu *:size-full",
     {
         variants: {
             size: {

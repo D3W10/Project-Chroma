@@ -39,10 +39,16 @@ export function PhotoViewer({ item, onClose }: PhotoViewerProps) {
     return (
         <div className="flex flex-col absolute inset-0 bg-background z-10" onDoubleClick={closeViewer}>
             <Toolbar className="absolute">
-                <div>
+                <div className="flex gap-2">
                     <Button variant="outline" size="icon" onClick={onClose}>
                         <IconChevronLeft className="size-5" />
                     </Button>
+                    {item.live_video && (
+                        <Button variant="outline" className="pl-2 pr-2.5 gap-x-2">
+                            <IconLivePhoto className="size-5" />
+                            <span className="uppercase">Live</span>
+                        </Button>
+                    )}
                 </div>
                 <div className="flex gap-2">
                     <ButtonGroup>
@@ -66,7 +72,7 @@ export function PhotoViewer({ item, onClose }: PhotoViewerProps) {
                     </ButtonGroup>
                 </div>
             </Toolbar>
-            <TransformWrapper disablePadding wheel={{ activationKeys: ["Control", "Meta"] }} panning={{ wheelPanning: true }}>
+            <TransformWrapper>
                 <TransformComponent
                     wrapperStyle={{ width: "100%", height: "100%" }}
                 >
@@ -76,24 +82,7 @@ export function PhotoViewer({ item, onClose }: PhotoViewerProps) {
                         className="max-w-full max-h-full object-contain shadow-2xl pointer-events-auto"
                     />
                 </TransformComponent>
-                <div className="absolute top-2 left-2">
-                    <IconLivePhoto className="size-5" />
-                </div>
             </TransformWrapper>
-            {/* <div className="flex-1 min-h-0 w-full flex items-center justify-center">
-                <TransformWrapper panning={{ disabled: true }} wheel={{ disabled: true }}>
-                    <TransformComponent
-                        wrapperStyle={{ width: "100%", height: "100%", paddingTop: "3.25rem" }}
-                        contentStyle={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center" }}
-                    >
-                        <motion.img
-                            layoutId={`item-${item.id}`}
-                            src={convertFileSrc(selectedLibrary.path + "/originals/" + item.id + "." + item.file_ext)}
-                            className="max-w-full max-h-full object-contain shadow-2xl pointer-events-auto"
-                        />
-                    </TransformComponent>
-                </TransformWrapper>
-            </div> */}
         </div>
     );
 }

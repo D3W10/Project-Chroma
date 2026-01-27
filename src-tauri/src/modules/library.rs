@@ -28,7 +28,9 @@ fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, St
         return Err("notfound".to_string());
     }
 
-    Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))
+    let conn = Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))?;
+    conn.execute("PRAGMA foreign_keys = ON", []).map_err(|e| utils::treat(e, "Unable to open database"))?;
+    Ok(conn)
 }
 
 fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, String> {
@@ -262,7 +264,7 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     let adjustments_dir = library_root.join("adjustments");
     fs::create_dir_all(&adjustments_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
 
-    let processed_count = std::sync::atomic::AtomicUsize::new(0);
+    let processed_count = atomic::AtomicUsize::new(0);
     let app_handle = app.clone();
 
     let results: Result<Vec<utils::Item>, String> = items
@@ -503,3 +505,52 @@ pub fn create_album(app: AppHandle, library_id: String, name: String, descriptio
     Ok(album)
 }
 
+#[tauri::command]
+pub fn add_items_to_album(app: AppHandle, library_id: String, album_id: String, item_ids: Vec<String>) -> Result<(), String> {
+    let conn = get_db_connection(&app, &library_id)?;
+    let now = Utc::now();
+
+    for item_id in item_ids {
+        conn.execute(
+            "INSERT INTO album_item (album_id, item_id, created_at) VALUES (?1, ?2, ?3)",
+            params![album_id, item_id, now.to_rfc3339()],
+        ).map_err(|e| utils::treat(e, "Unable to insert item into album"))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn remove_items_from_album(app: AppHandle, library_id: String, album_id: String, item_ids: Vec<String>) -> Result<(), String> {
+    let conn = get_db_connection(&app, &library_id)?;
+
+    for item_id in item_ids {
+        conn.execute(
+            "DELETE FROM album_item WHERE album_id = ?1 AND item_id = ?2",
+            params![album_id, item_id],
+        ).map_err(|e| utils::treat(e, "Unable to remove item from album"))?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<utils::ItemAlbumRef>, String> {
+    let conn = get_db_connection(&app, &library_id)?;
+
+    let mut stmt = conn.prepare(
+        "SELECT p.*, ai.created_at as added_at FROM item p 
+        INNER JOIN album_item ai ON p.id = ai.item_id 
+        WHERE ai.album_id = ?1 
+        ORDER BY ai.created_at DESC"
+    ).map_err(|e| utils::treat(e, "Unable to obtain album items"))?;
+
+    let item_iter = stmt.query_map(params![album_id], |row| utils::deserialize_item_album_ref(row)).map_err(|e| utils::treat(e, "Unable to obtain album items"))?;
+
+    let mut items = Vec::new();
+    for item in item_iter {
+        items.push(item.map_err(|e| utils::treat(e, "Unable to obtain album items"))?);
+    }
+
+    Ok(items)
+}

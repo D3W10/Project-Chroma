@@ -96,7 +96,7 @@ function FieldLabel({
     <Label
       data-slot="field-label"
       className={cn(
-        "has-data-[state=checked]:bg-primary/5 has-data-[state=checked]:ring-primary dark:has-data-[state=checked]:bg-primary/10 dark:has-data-[state=checked]:ring-primary gap-2 group-data-[disabled=true]/field:opacity-50 has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:ring has-[>[data-slot=field]]:ring-border has-[>[data-slot=field]]:has-data-[state=checked]:ring-2 [&>*]:data-[slot=field]:p-3 group/field-label peer/field-label flex w-fit leading-snug",
+        "has-data-[state=checked]:bg-primary/5 has-data-[state=checked]:ring-primary dark:has-data-[state=checked]:bg-primary/10 dark:has-data-[state=checked]:ring-primary gap-2 group-data-[disabled=true]/field:opacity-50 has-[>[data-slot=field]]:rounded-md has-[>[data-slot=field]]:ring has-[>[data-slot=field]]:ring-border has-[>[data-slot=field]]:has-data-[state=checked]:ring-primary has-[>[data-slot=field]]:has-data-[state=checked]:ring-2 [&>*]:data-[slot=field]:p-3 group/field-label peer/field-label flex w-fit leading-snug",
         "has-[>[data-slot=field]]:w-full has-[>[data-slot=field]]:flex-col",
         className
       )}

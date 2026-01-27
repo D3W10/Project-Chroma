@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:where(:not([data-theme="light"])));
+@custom-variant dark (html:not([data-theme="light"]) &);
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
@@ -32,7 +32,8 @@
 
     --drop-shadow-favorite: 0 0 2px rgb(0 0 0 / 0.75);
 
-    --inset-shadow-center: inset 0 0 14px oklch(0 0 0 / 0.3);
+    --inset-shadow-center: inset 0 0 14px oklch(1 0 0 / 0.5);
+    --inset-shadow-center-dark: inset 0 0 14px oklch(0 0 0 / 0.3);
 }
 
 :root {
@@ -48,7 +49,7 @@
     --popover-foreground: oklch(0.98 0.01 250);
 
     --primary: var(--color-stunning-blue);
-    --primary-foreground: oklch(0.10 0.05 250);
+    --primary-foreground: oklch(0.14 0.03 250);
 
     --secondary: color-mix(in oklch, var(--color-background), var(--color-foreground) 12%);
     --secondary-foreground: oklch(0.85 0.01 250);
@@ -72,24 +73,29 @@
 }
 
 [data-theme="light"] {
-    --background: var(--color-white);
-    --foreground: var(--color-slate-950);
-    --card: var(--color-white);
-    --card-foreground: var(--color-slate-950);
-    --popover: var(--color-white);
-    --popover-foreground: var(--color-slate-950);
-    --primary: var(--color-stunning-blue);
-    --primary-foreground: var(--color-white);
-    --secondary: var(--color-slate-100);
-    --secondary-foreground: var(--color-slate-950);
-    --muted: var(--color-slate-100);
-    --muted-foreground: var(--color-slate-600);
-    --accent: var(--color-slate-200);
-    --accent-foreground: var(--color-slate-950);
-    --destructive: var(--color-red-500);
-    --border: color-mix(in oklch, var(--color-slate-950) 15%, transparent);
-    --input: color-mix(in oklch, var(--color-slate-950) 10%, transparent);
-    --ring: color-mix(in oklch, var(--color-slate-950) 15%, transparent);
+    --background: oklch(1 0 250);
+    --foreground: oklch(0.14 0.03 250);
+
+    --card: oklch(1 0 250);
+    --card-foreground: oklch(0.14 0.03 250);
+
+    --popover: oklch(1 0 250);
+    --popover-foreground: oklch(0.14 0.03 250);
+
+    --primary-foreground: oklch(1 0 250);
+
+    --secondary: color-mix(in oklch, var(--color-background), oklch(0.14 0.12 250) 10%);
+    --secondary-foreground: oklch(0.45 0.03 250);
+
+    --muted: color-mix(in oklch, var(--color-background), oklch(0.14 0.12 250) 6%);
+    --muted-foreground: oklch(0.6 0.04 250);
+
+    --accent-foreground: oklch(0.14 0.03 250);
+
+    --destructive-foreground: oklch(0.14 0.03 250);
+
+    --border: oklch(0.14 0.03 250 / 10%);
+    --input: oklch(0.14 0.03 250 / 10%);
 }
 
 @layer base {

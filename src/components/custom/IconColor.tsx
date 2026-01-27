@@ -7,13 +7,14 @@ const iconColorVariants = cva(
     {
         variants: {
             size: {
-                default: "size-6 text-sm rounded-sm ring-2",
+                sm: "size-6 text-sm rounded-sm ring-2",
+                md: "size-8 text-md rounded-sm ring-2",
                 lg: "size-10 text-lg rounded-md ring-3",
                 xl: "size-12 text-xl rounded-lg ring-3",
             },
         },
         defaultVariants: {
-            size: "default",
+            size: "sm",
         },
     },
 );

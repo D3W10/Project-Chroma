@@ -18,6 +18,8 @@ pub fn run() {
             config::remove_library,
             config::get_selected_library,
             config::set_selected_library,
+            config::get_settings,
+            config::set_settings,
             library::check_library_health,
             library::upgrade_library,
             library::create_library,
@@ -28,8 +30,9 @@ pub fn run() {
             library::delete_items,
             library::get_albums,
             library::create_album,
-            get_thumbnail_path,
-            get_original_path
+            library::add_items_to_album,
+            library::remove_items_from_album,
+            library::get_album_items,
         ])
         .setup(|app| {
             let _ = app.handle().store("config.json");
