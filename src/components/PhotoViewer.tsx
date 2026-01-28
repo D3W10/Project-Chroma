@@ -29,7 +29,7 @@ export function PhotoViewer({ item, onClose }: PhotoViewerProps) {
 
         await setItemsFavorite({ libraryId: selectedLibrary.id, itemIds: [item.id], value: !favorite });
         setFavorite(!favorite);
-        queryClient.invalidateQueries({ queryKey: ["items"] });
+        queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "items"] });
     }
 
     function closeViewer(e: React.MouseEvent<HTMLDivElement, MouseEvent>) {

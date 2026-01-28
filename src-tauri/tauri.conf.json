@@ -16,7 +16,7 @@
                 "width": 1280,
                 "height": 800,
                 "minWidth": 1000,
-                "minHeight": 600,
+                "minHeight": 625,
                 "titleBarStyle": "Overlay",
                 "resizable": true,
                 "fullscreen": false,

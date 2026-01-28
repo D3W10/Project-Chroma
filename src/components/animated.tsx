@@ -44,5 +44,8 @@ function createAnimatedComponent<Tag extends keyof HTMLElementTagNameMap>(elemen
 export const animate = {
     div: createAnimatedComponent("div"),
     h1: createAnimatedComponent("h1"),
+    h2: createAnimatedComponent("h2"),
     p: createAnimatedComponent("p"),
+    span: createAnimatedComponent("span"),
+    img: createAnimatedComponent("img"),
 };

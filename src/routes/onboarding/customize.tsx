@@ -1,130 +1,56 @@
-import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
-import { motion } from "motion/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { animate } from "@/components/animated";
+import { AppMockup } from "@/components/custom/AppMockup";
+import { OnboardingLayout } from "@/components/layout/onboardingLayout";
 import { Button } from "@/components/ui/button";
+import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Slider } from "@/components/ui/slider";
+import { defaultSettings, useSettings } from "@/lib/useSettings";
+import { IconReload } from "@tabler/icons-react";
 
 export const Route = createFileRoute("/onboarding/customize")({
     component: RouteComponent,
 });
 
 function RouteComponent() {
-    const [libraryName, setLibraryName] = useState("");
-    const [libraryIcon, setLibraryIcon] = useState("📁");
-    const [libraryColor, setLibraryColor] = useState("#ffff00");
-    const [libraryPath, setLibraryPath] = useState("");
-    const [loading, setLoading] = useState(false);
-
-    const handleSelectFolder = async () => {
-        try {
-            const selected = await open({
-                directory: true,
-                title: "Select folder for your photo library",
-            });
-
-            if (selected) {
-                setLibraryPath(selected);
-            }
-        } catch (error) {
-            console.error("Failed to open folder dialog:", error);
-        }
-    };
-
-    const handleCreateLibrary = async () => {
-        if (!libraryName.trim() || !libraryPath) return;
-
-        setLoading(true);
-        try {
-            await invoke("create_library", {
-                name: libraryName.trim(),
-                icon: libraryIcon,
-                color: libraryColor,
-                path: libraryPath,
-            });
-
-            /* navigate({ to: "/" }); */
-        } catch (error) {
-            console.error("Failed to create library:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Create your first photo library to get started
+    const { settings, updateSettings } = useSettings();
+    const navigate = useNavigate();
 
     return (
-        <motion.div
-            className="space-y-6"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: 0.6 }}
-        >
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Library Name
-                </label>
-                <input
-                    type="text"
-                    value={libraryName}
-                    onChange={e => setLibraryName(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-md"
-                    placeholder="My Photos"
-                />
+        <OnboardingLayout>
+            <div className="w-full space-y-6">
+                <animate.h1 className="text-xl font-bold" delay={0.5}>First, let&apos;s customize your app experience</animate.h1>
+                <FieldSet className="w-full">
+                    <FieldGroup>
+                        <animate.div delay={0.65}>
+                            <Field>
+                                <FieldLabel htmlFor="appTheme">Theme</FieldLabel>
+                                <div id="appTheme" className="w-fit! p-0.5 flex gap-0.5 rounded-lg ring-1 ring-input/75">
+                                    <Button variant={settings.theme === "dark" ? "default" : "ghost"} onClick={() => updateSettings({ theme: "dark" })}>Dark mode</Button>
+                                    <Button variant={settings.theme === "light" ? "default" : "ghost"} onClick={() => updateSettings({ theme: "light" })}>Light mode</Button>
+                                </div>
+                            </Field>
+                        </animate.div>
+                        <animate.div delay={0.8}>
+                            <Field>
+                                <FieldLabel htmlFor="appColor">Accent color</FieldLabel>
+                                <div id="appColor" className="flex gap-2">
+                                    <Slider defaultValue={[defaultSettings.accentColor]} min={0} max={16} step={1} value={[settings.accentColor]} onValueChange={v => updateSettings({ accentColor: v[0] })} />
+                                    <Button variant="ghost" size="icon" disabled={settings.accentColor === defaultSettings.accentColor} onClick={() => updateSettings({ accentColor: defaultSettings.accentColor })}>
+                                        <IconReload />
+                                    </Button>
+                                </div>
+                            </Field>
+                        </animate.div>
+                    </FieldGroup>
+                </FieldSet>
+                <animate.div className="w-full px-12 py-8 bg-secondary/50 rounded-xl" delay={0.95}>
+                    <AppMockup />
+                </animate.div>
             </div>
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Library Icon
-                </label>
-                <div className="flex gap-2">
-                    {["📁", "📷", "🎨", "🌟", "💎"].map(icon => (
-                        <button
-                            key={icon}
-                            onClick={() => setLibraryIcon(icon)}
-                            className={`w-12 h-12 text-2xl border rounded-md flex items-center justify-center ${
-                                libraryIcon === icon
-                                    ? "border-primary bg-primary/10"
-                                    : "border-border hover:bg-muted"
-                            }`}
-                        >
-                            {icon}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div>
-                <label className="block text-sm font-medium mb-2">
-                    Library Location
-                </label>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={libraryPath}
-                        readOnly
-                        className="flex-1 px-3 py-2 border rounded-md bg-muted"
-                        placeholder="Select a folder..."
-                    />
-                    <Button
-                        variant="outline"
-                        onClick={handleSelectFolder}
-                    >
-                        <p>Insert folder</p>
-                    </Button>
-                </div>
-            </div>
-            <Button
-                onClick={handleCreateLibrary}
-                disabled={!libraryName.trim() || !libraryPath || loading}
-                className="w-full"
-            >
-                {loading
-                    ? "Creating Library..."
-                    : (
-                        <>
-                            Create Library
-                        </>
-                    )}
-            </Button>
-        </motion.div>
+            <animate.div className="w-full flex justify-end" delay={1.45}>
+                <Button className="w-24" onClick={() => navigate({ to: "/onboarding/requirements", viewTransition: { types: ["slide-left"] } })}>Next</Button>
+            </animate.div>
+        </OnboardingLayout>
     );
 }

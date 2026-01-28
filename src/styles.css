@@ -26,7 +26,7 @@
     --color-destructive-foreground: var(--destructive-foreground);
     --color-border: var(--border);
     --color-input: var(--input);
-    --color-ring: var(--ring);
+    --color-ring: var(--primary);
 
     --color-stunning-blue: var(--color-stunning-blue);
 
@@ -65,9 +65,24 @@
 
     --border: oklch(0.98 0.01 250 / 20%);
     --input: oklch(0.98 0.01 250 / 15%);
-    --ring: var(--color-stunning-blue);
 
+    --color-stunning-red: var(--color-red-500);
+    --color-stunning-orange: var(--color-orange-500);
+    --color-stunning-amber: var(--color-amber-500);
+    --color-stunning-yellow: var(--color-yellow-500);
+    --color-stunning-lime: var(--color-lime-500);
+    --color-stunning-green: var(--color-green-500);
+    --color-stunning-emerald: var(--color-emerald-500);
+    --color-stunning-teal: var(--color-teal-500);
     --color-stunning-blue: oklch(0.75 0.17 209);
+    --color-stunning-sky: var(--color-sky-500);
+    --color-stunning-dark-blue: var(--color-blue-500);
+    --color-stunning-indigo: var(--color-indigo-500);
+    --color-stunning-violet: var(--color-violet-500);
+    --color-stunning-purple: var(--color-purple-500);
+    --color-stunning-fuchsia: var(--color-fuchsia-500);
+    --color-stunning-pink: var(--color-pink-500);
+    --color-stunning-rose: var(--color-rose-500);
 
     --rainbow: conic-gradient(from 0deg, var(--color-red-500), var(--color-orange-500), var(--color-yellow-500), var(--color-lime-500), var(--color-emerald-500), var(--color-sky-500), var(--color-blue-500), var(--color-violet-500), var(--color-pink-500), var(--color-red-500));
 }
@@ -144,6 +159,15 @@ html:active-view-transition-type(slide-left) {
     }
 }
 
+html:active-view-transition-type(slide-right) {
+    &::view-transition-old(onboarding-content) {
+        animation: 300ms cubic-bezier(0.22, 1, 0.36, 1) slide-out-right;
+    }
+    &::view-transition-new(onboarding-content) {
+        animation: 300ms cubic-bezier(0.22, 1, 0.36, 1) slide-in-right;
+    }
+}
+
 [data-sonner-toast][data-styled=true] {
     @apply h-auto p-3 flex items-start;
 }
@@ -197,6 +221,28 @@ html:active-view-transition-type(slide-left) {
     from {
         opacity: 0;
         transform: translateX(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slide-out-right {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+}
+
+@keyframes slide-in-right {
+    from {
+        opacity: 0;
+        transform: translateX(-12px);
     }
     to {
         opacity: 1;

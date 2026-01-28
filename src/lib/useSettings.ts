@@ -7,20 +7,23 @@ interface SettingsState {
     updateSettings: (partial: Partial<Settings>) => Promise<void>;
 }
 
+export const defaultSettings = {
+    theme: "dark",
+    accentColor: 8,
+    libraryZoom: 2,
+    libraryExpanded: false,
+    albumLayout: "card",
+    importOptions: {
+        livePhotos: false,
+        edits: false,
+    },
+} satisfies Settings;
+
 export const useSettings = create<SettingsState>((set, get) => ({
-    settings: {
-        theme: "dark",
-        libraryZoom: 2,
-        libraryExpanded: false,
-        albumLayout: "card",
-        importOptions: {
-            livePhotos: false,
-            edits: false,
-        },
-    } satisfies Settings,
+    settings: defaultSettings,
     updateSettings: async (partial: Partial<Settings>) => {
         const whole = { ...get().settings, ...partial };
-        await setSettingsOnBackend({ settings: whole });
         set({ settings: whole });
+        await setSettingsOnBackend({ settings: whole });
     },
 }));

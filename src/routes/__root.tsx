@@ -1,13 +1,13 @@
 import { useEffect } from "react";
-import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import { createRootRouteWithContext, Outlet, useLocation } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { useQuery } from "@tanstack/react-query";
 import { Framebar } from "@/components/layout/framebar";
 import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { getLibraries, getSelectedLibrary, getSettings, setSelectedLibrary as setSelectedLibraryOnConfig } from "@/lib/invoker";
+import { appColors, type Library } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSettings } from "@/lib/useSettings";
-import type { Library } from "@/lib/models";
 
 export const Route = createRootRouteWithContext<{
     selectedLibrary: Library | null;
@@ -27,8 +27,10 @@ function RootComponent() {
         pendingLibraryId,
         setPendingLibraryId,
     } = useLibrary();
-    const { settings } = Route.useRouteContext();
-    const { updateSettings } = useSettings();
+    const location = useLocation();
+    const navigate = Route.useNavigate();
+    const { settings: loadedSettings } = Route.useRouteContext();
+    const { settings, updateSettings } = useSettings();
 
     const { data } = useQuery({
         queryKey: ["libraries"],
@@ -42,6 +44,9 @@ function RootComponent() {
 
     useEffect(() => {
         setLibraries(data?.data ?? []);
+
+        if (data?.data?.length === 0 && location.pathname !== "/onboarding/library")
+            navigate({ to: "/onboarding/library" });
     }, [data]);
 
     useEffect(() => {
@@ -66,10 +71,13 @@ function RootComponent() {
     }, [selectedLibrary]);
 
     useEffect(() => {
-        if (settings.data) {
-            updateSettings(settings.data);
-            document.documentElement.setAttribute("data-theme", settings.data.theme);
-        }
+        if (loadedSettings.data)
+            updateSettings(loadedSettings.data);
+    }, [loadedSettings]);
+
+    useEffect(() => {
+        document.documentElement.setAttribute("data-theme", settings.theme);
+        document.body.style.setProperty("--primary", `var(--color-stunning-${appColors[settings.accentColor]})`);
     }, [settings]);
 
     return (

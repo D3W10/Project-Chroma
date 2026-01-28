@@ -1,7 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ErrorCircle24Regular, ImageMultiple24Regular } from "@fluentui/react-icons";
+import { IconCircleArrowUp, IconExclamationCircle, IconLayoutGrid } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
 import { IconBox } from "@/components/custom/IconBox";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -84,7 +84,7 @@ function RouteComponent() {
                     libraryExists?.error === "notfound" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
-                                <ErrorCircle24Regular />
+                                <IconExclamationCircle />
                             </IconBox>
                             <animate.h1 className="text-xl font-bold" delay={0.15}>Library not found</animate.h1>
                             <animate.div className="space-y-2" delay={0.3}>
@@ -101,7 +101,7 @@ function RouteComponent() {
                     ) : libraryExists?.error === "outdated" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
-                                <ErrorCircle24Regular />
+                                <IconCircleArrowUp />
                             </IconBox>
                             <animate.h1 className="text-xl font-bold" delay={0.15}>Library outdated</animate.h1>
                             <animate.div className="text-muted-foreground space-y-2" delay={0.3}>
@@ -118,7 +118,7 @@ function RouteComponent() {
                     ) : libraryExists?.error === "recent" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
-                                <ErrorCircle24Regular />
+                                <IconExclamationCircle />
                             </IconBox>
                             <animate.h1 className="text-xl font-bold" delay={0.15}>Incompatible library</animate.h1>
                             <animate.p className="text-muted-foreground" delay={0.3}>This library has been created using a more recent version of Project Chroma. You need to update the app to the latest version before using it.</animate.p>
@@ -129,7 +129,7 @@ function RouteComponent() {
                     ) : (
                         <CenterLayout>
                             <IconBox className="mb-4">
-                                <ErrorCircle24Regular />
+                                <IconExclamationCircle />
                             </IconBox>
                             <animate.h1 className="text-xl font-bold" delay={0.15}>Error accessing library</animate.h1>
                             <animate.p className="text-muted-foreground" delay={0.3}>There was an issue accessing this library on the filesystem. Please check if your operating system or any other application is blocking access to the folder.</animate.p>
@@ -138,7 +138,7 @@ function RouteComponent() {
                 ) : (
                     <CenterLayout>
                         <IconBox className="mb-4">
-                            <ImageMultiple24Regular />
+                            <IconLayoutGrid />
                         </IconBox>
                         <animate.h1 className="text-xl font-bold" delay={0.15}>No library selected</animate.h1>
                         <animate.p delay={0.3} className="text-muted-foreground">Use the select on the top left to open an existing library or create a new one using the button below.</animate.p>

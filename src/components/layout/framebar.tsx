@@ -44,63 +44,67 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
 
     return (
         <div className="w-full h-12 min-h-12 pl-26 pr-1.5 flex justify-between items-center" data-tauri-drag-region>
-            <div className="flex items-center">
-                {libraries.length > 0 && !location.pathname.startsWith("/onboarding") && (
-                    <Popover open={isLibraryPanelOpen} onOpenChange={setIsLibraryPanelOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" className="w-54 h-full min-w-0 px-2 py-1.5 flex items-center gap-2" role="combobox" aria-expanded={isLibraryPanelOpen}>
-                                <IconColor color={selectedLibrary ? selectedLibrary.color : "var(--color-slate-500)"}>
-                                    {selectedLibrary ? selectedLibrary.icon : "📁"}
-                                </IconColor>
-                                <span className="flex-1 text-left truncate transition-colors">{selectedLibrary ? selectedLibrary.name : "Select library..."}</span>
-                                <IconSelector className="text-muted-foreground" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-58 p-0">
-                            <Command>
-                                <CommandList>
-                                    <CommandGroup>
-                                        {libraries.map(lib => (
-                                            <CommandItem className="[&>svg]:hidden" key={lib.id} value={lib.id} onSelect={handleLibrarySelect}>
-                                                <IconColor color={lib.color}>{lib.icon}</IconColor>
-                                                <span className="truncate">{lib.name}</span>
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                    <CommandSeparator />
-                                    <CommandGroup>
-                                        <CommandItem value="createLib" onSelect={handleCreateLibrary}>
-                                            Create new library
-                                        </CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                )}
-            </div>
-            <div className="flex items-center gap-1">
-                <Popover open={isOpen} onOpenChange={setIsOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className={"text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
-                            {peekNotification ? (
-                                <>
-                                    <Spinner />
-                                    {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
-                                </>
-                            ) : (
-                                <IconClipboardList className="size-5" />
-                            )}
+            {!location.pathname.startsWith("/onboarding") && (
+                <>
+                    <div className="flex items-center">
+                        {libraries.length > 0 && (
+                            <Popover open={isLibraryPanelOpen} onOpenChange={setIsLibraryPanelOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" className="w-54 h-full min-w-0 px-2 py-1.5 flex items-center gap-2" role="combobox" aria-expanded={isLibraryPanelOpen}>
+                                        <IconColor color={selectedLibrary ? selectedLibrary.color : "var(--color-slate-500)"}>
+                                            {selectedLibrary ? selectedLibrary.icon : "📁"}
+                                        </IconColor>
+                                        <span className="flex-1 text-left truncate transition-colors">{selectedLibrary ? selectedLibrary.name : "Select library..."}</span>
+                                        <IconSelector className="text-muted-foreground" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-58 p-0">
+                                    <Command>
+                                        <CommandList>
+                                            <CommandGroup>
+                                                {libraries.map(lib => (
+                                                    <CommandItem className="[&>svg]:hidden" key={lib.id} value={lib.id} onSelect={handleLibrarySelect}>
+                                                        <IconColor color={lib.color}>{lib.icon}</IconColor>
+                                                        <span className="truncate">{lib.name}</span>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                            <CommandSeparator />
+                                            <CommandGroup>
+                                                <CommandItem value="createLib" onSelect={handleCreateLibrary}>
+                                                    Create new library
+                                                </CommandItem>
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <Popover open={isOpen} onOpenChange={setIsOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className={"text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
+                                    {peekNotification ? (
+                                        <>
+                                            <Spinner />
+                                            {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
+                                        </>
+                                    ) : (
+                                        <IconClipboardList className="size-5" />
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" sideOffset={12} className="w-80 p-0">
+                                <NotificationCenter />
+                            </PopoverContent>
+                        </Popover>
+                        <Button variant="ghost" size="icon" className="text-muted-foreground">
+                            <IconSettings className="size-5" />
                         </Button>
-                    </PopoverTrigger>
-                    <PopoverContent align="end" sideOffset={12} className="w-80 p-0">
-                        <NotificationCenter />
-                    </PopoverContent>
-                </Popover>
-                <Button variant="ghost" size="icon" className="text-muted-foreground">
-                    <IconSettings className="size-5" />
-                </Button>
-            </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }

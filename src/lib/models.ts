@@ -76,6 +76,7 @@ export type NotificationType = "info" | "success" | "error" | "warning" | "promi
 
 export type Settings = {
     theme: "dark" | "light";
+    accentColor: number;
     libraryZoom: number;
     libraryExpanded: boolean;
     albumLayout: "card" | "grid" | "list";
@@ -84,3 +85,5 @@ export type Settings = {
         edits: boolean;
     };
 };
+
+export const appColors = ["red", "orange", "amber", "yellow", "lime", "green", "emerald", "teal", "blue", "sky", "dark-blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose"];

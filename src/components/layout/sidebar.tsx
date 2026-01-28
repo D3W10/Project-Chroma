@@ -13,7 +13,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     ];
 
     return (
-        <nav className={`w-28 h-full ${collapsed ? "-ml-28" : ""} px-2 space-y-2 transition-[margin] duration-200`}>
+        <nav className={cn("w-28 h-full px-2 space-y-2 transition-[margin] duration-200", collapsed ? "-ml-28" : "")}>
             {navItems.map(item => {
                 const isActive = item.path === "/" ? location.pathname === item.path : location.pathname.startsWith(item.path);
                 const Icon = !isActive ? item.icon : item.iconSelected;
