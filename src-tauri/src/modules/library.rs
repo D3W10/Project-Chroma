@@ -11,9 +11,21 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter, async_runtime::spawn_blocking};
 use uuid::Uuid;
 
+use crate::modules;
 use crate::modules::config;
 use crate::modules::utils;
 use crate::modules::migrations;
+
+fn open_db_from_path(db_path: &Path) -> Result<Connection, String> {
+    if !db_path.exists() {
+        log::error!("Database not found at {:?}", db_path);
+        return Err("notfound".to_string());
+    }
+
+    let conn = Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))?;
+    conn.execute("PRAGMA foreign_keys = ON", []).map_err(|e| utils::treat(e, "Unable to open database"))?;
+    Ok(conn)
+}
 
 fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, String> {
     let meta_path = get_library_root_path(app, library_id)?;
@@ -23,14 +35,7 @@ fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, St
     }
 
     let db_path = meta_path.join("lib.db");
-    if !db_path.exists() {
-        log::error!("Database not found for library {}", library_id);
-        return Err("notfound".to_string());
-    }
-
-    let conn = Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))?;
-    conn.execute("PRAGMA foreign_keys = ON", []).map_err(|e| utils::treat(e, "Unable to open database"))?;
-    Ok(conn)
+    open_db_from_path(&db_path)
 }
 
 fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, String> {
@@ -88,8 +93,15 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
 
     match conn {
         Ok(conn) => {
-            let _ = fs::create_dir_all(full_path.join("originals"));
-            let _ = fs::create_dir_all(full_path.join("thumbnails"));
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS library (
+                    name TEXT NOT NULL,
+                    icon TEXT NOT NULL,
+                    color TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )",
+                [],
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS item (
@@ -109,6 +121,7 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
                     raw_original_name TEXT,
                     raw_file_size INTEGER,
                     raw_checksum TEXT,
+                    raw_live_video TEXT,
                     has_adjustments INTEGER DEFAULT 0,
                     created_at TEXT NOT NULL
                 )",
@@ -143,6 +156,11 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
                 [],
             ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
+            conn.execute(
+                "INSERT INTO library (name, icon, color, created_at) VALUES (?1, ?2, ?3, ?4)",
+                params![name, icon, color, Utc::now().to_rfc3339()],
+            ).map_err(|e| utils::treat(e, "Error creating library"))?;
+
             migrations::label_latest(conn)?;
         }
         Err(e) => return Err(e.to_string()),
@@ -168,7 +186,60 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
 }
 
 #[tauri::command]
-pub fn get_items(app: AppHandle, library_id: String) -> Result<Vec<utils::Item>, String> {
+pub fn get_library_info_from_path(path: &str) -> Result<Value, String> {
+    let db_path = Path::new(path).join("lib.db");
+    let conn = open_db_from_path(&db_path)?;
+
+    let mut stmt = conn.prepare("SELECT name, icon, color FROM library LIMIT 1").map_err(|e| utils::treat(e, "Unable to fetch library metadata"))?;
+    let mut library_info = stmt.query_row([], |row| {
+        Ok(serde_json::json!({
+            "name": row.get::<_, String>(0)?,
+            "icon": row.get::<_, String>(1)?,
+            "color": row.get::<_, String>(2)?,
+        }))
+    }).map_err(|e| utils::treat(e, "Unable to fetch library metadata"))?;
+
+    let count: i64 = conn.query_row("SELECT COUNT(*) FROM item", [], |row| row.get(0)).map_err(|e| utils::treat(e, "Unable to fetch item count"))?;
+
+    if let Some(obj) = library_info.as_object_mut() {
+        obj.insert("count".to_string(), serde_json::Value::Number(count.into()));
+    }
+
+    Ok(library_info)
+}
+
+#[tauri::command]
+pub fn add_library(app: AppHandle, path: String) -> Result<Value, String> {
+    let info = get_library_info_from_path(&path)?;
+    
+    let library_id = Uuid::new_v4().to_string();
+    let name = info.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown");
+    let icon = info.get("icon").and_then(|v| v.as_str()).unwrap_or("");
+    let color = info.get("color").and_then(|v| v.as_str()).unwrap_or("");
+
+    let store = config::get_store(&app)?;
+    let mut libraries = match store.get("libraries") {
+        Some(Value::Array(arr)) => arr.clone(),
+        _ => vec![],
+    };
+
+    let value = serde_json::json!({
+        "id": library_id,
+        "name": name,
+        "icon": icon,
+        "color": color,
+        "path": path
+    });
+
+    libraries.push(value.clone());
+    store.set("libraries", Value::Array(libraries));
+
+    store.save().map_err(|e| e.to_string())?;
+    Ok(value)
+}
+
+#[tauri::command]
+pub fn get_items(app: AppHandle, library_id: String) -> Result<Vec<modules::Item>, String> {
     let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn.prepare("SELECT * FROM item ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain items"))?;
 
@@ -183,23 +254,44 @@ pub fn get_items(app: AppHandle, library_id: String) -> Result<Vec<utils::Item>,
 }
 
 #[tauri::command]
-pub async fn verify_conflicts(source_paths: Vec<String>) -> Result<utils::ImportCandidate, String> {
-    let mut photo_map: HashMap<String, Vec<String>> = HashMap::new();
-    let mut video_map: HashMap<String, Vec<String>> = HashMap::new();
-    let mut others: Vec<String> = Vec::new();
+pub async fn verify_conflicts(source_paths: Vec<String>, check_live_photos: bool, parse_edits: bool) -> Result<modules::ImportCandidate, String> {
+    let mut groups: HashMap<String, modules::Group> = HashMap::new();
+    let empty_group = || -> modules::Group { modules::Group { original_items: vec![], edited_items: vec![], original_videos: vec![], edited_videos: vec![], adjustments: None } };
+    let unedited_name = |name: &str| -> String { format!("IMG_{}", &name[5..]) };
 
     for path_str in &source_paths {
         let path = Path::new(path_str);
-        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
-            let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
-            let mime = utils::map_extension_to_mime(&ext);
+        if path.file_name().and_then(|s| s.to_str()).is_some() {
+            let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
+            let mime = utils::map_extension_to_mime(path.extension().and_then(|s| s.to_str()).unwrap_or(""));
+
+            if path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase() == "aae" {
+                groups.entry(stem.to_string()).or_insert(empty_group()).adjustments = Some(path_str.clone());
+                continue;
+            }
 
             if mime.starts_with("image/") {
-                photo_map.entry(stem.to_string()).or_default().push(path_str.clone());
+                if parse_edits && stem.starts_with("IMG_E") {
+                    groups.entry(unedited_name(stem)).or_insert(empty_group()).edited_items.push(path_str.clone());
+                } else {
+                    groups.entry(stem.to_string()).or_insert(empty_group()).original_items.push(path_str.clone());
+                }
             } else if mime.starts_with("video/") {
-                video_map.entry(stem.to_string()).or_default().push(path_str.clone());
-            } else {
-                others.push(path_str.clone());
+                if parse_edits && stem.starts_with("IMG_E") {
+                    if check_live_photos {
+                        groups.entry(unedited_name(stem)).or_insert(empty_group()).edited_videos.push(path_str.clone());
+                    } else {
+                        groups.entry(unedited_name(stem)).or_insert(empty_group()).edited_items.push(path_str.clone());
+                    }
+                } else {
+                    if check_live_photos {
+                        groups.entry(stem.to_string()).or_insert(empty_group()).original_videos.push(path_str.clone());
+                    } else if parse_edits {
+                        groups.entry(stem.to_string()).or_insert(empty_group()).original_items.push(path_str.clone());
+                    } else {
+                        groups.entry(stem.to_string() + "_V").or_insert(empty_group()).original_items.push(path_str.clone());
+                    }
+                }
             }
         }
     }
@@ -207,55 +299,57 @@ pub async fn verify_conflicts(source_paths: Vec<String>) -> Result<utils::Import
     let mut items_to_import = Vec::new();
     let mut conflicts = Vec::new();
 
-    for (stem, photos) in photo_map {
-        for photo_path in photos {
-            if let Some(videos) = video_map.get(&stem) {
-                if videos.len() == 1 {
-                    items_to_import.push(utils::ImportItem {
-                        source_path: photo_path,
-                        live_video_path: Some(videos[0].clone()),
-                    });
-                } else {
-                    conflicts.push(utils::Conflict {
-                        photo_path: photo_path,
-                        video_candidates: videos.clone(),
-                    });
-                }
-            } else {
-                items_to_import.push(utils::ImportItem {
-                    source_path: photo_path,
-                    live_video_path: None,
+    for (_, group) in groups {
+        if group.original_items.len() > 1 || group.edited_items.len() > 1 || group.original_videos.len() > 1 || group.edited_videos.len() > 1 {
+            conflicts.push(group);
+        } else {
+            let orig_item = group.original_items.first();
+            let edit_item = group.edited_items.first();
+            let orig_live_video = group.original_videos.first();
+            let edit_live_video = group.edited_videos.first();
+            let adjustments = group.adjustments;
+
+            if parse_edits && let Some(edit_item) = edit_item {
+                items_to_import.push(modules::ImportItem {
+                    source_path: edit_item.clone(),
+                    live_path: edit_live_video.cloned(),
+                    original_source_path: orig_item.cloned(),
+                    original_live_path: orig_live_video.cloned(),
+                    adjustments_path: adjustments,
+                });
+            } else if let Some(orig_item) = orig_item {
+                items_to_import.push(modules::ImportItem {
+                    source_path: orig_item.clone(),
+                    live_path: orig_live_video.cloned(),
+                    original_source_path: None,
+                    original_live_path: None,
+                    adjustments_path: adjustments,
+                });
+            } else if let Some(edit_live_video) = edit_live_video {
+                items_to_import.push(modules::ImportItem {
+                    source_path: edit_live_video.clone(),
+                    live_path: None,
+                    original_source_path: orig_live_video.cloned(),
+                    original_live_path: None,
+                    adjustments_path: adjustments,
+                });
+            } else if let Some(orig_live_video) = orig_live_video {
+                items_to_import.push(modules::ImportItem {
+                    source_path: orig_live_video.clone(),
+                    live_path: None,
+                    original_source_path: None,
+                    original_live_path: None,
+                    adjustments_path: adjustments,
                 });
             }
         }
     }
 
-    let consumed_videos: Vec<String> = items_to_import.iter().filter_map(|i| i.live_video_path.clone()).collect();
-    
-    for (_, videos) in video_map {
-        for video in videos {
-            if !consumed_videos.contains(&video) {
-                let is_conflict_candidate = conflicts.iter().any(|c| c.video_candidates.contains(&video));
-                if !is_conflict_candidate {
-                    items_to_import.push(utils::ImportItem {
-                        source_path: video,
-                        live_video_path: None,
-                    });
-                }
-            }
-        }
-    }
-
-    for other in others {
-        items_to_import.push(utils::ImportItem { source_path: other, live_video_path: None });
-    }
-
-    Ok(utils::ImportCandidate { items_to_import, conflicts })
+    Ok(modules::ImportCandidate { items_to_import, conflicts })
 }
 
-
 #[tauri::command]
-pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::ImportItem>, delete_source: bool) -> Result<Vec<utils::Item>, String> {
+pub async fn add_items(app: AppHandle, library_id: String, items: Vec<modules::ImportItem>, delete_source: bool) -> Result<Vec<modules::Item>, String> {
     let library_root = get_library_root_path(&app, &library_id)?;
     let originals_dir = library_root.join("originals");
     fs::create_dir_all(&originals_dir).map_err(|e| utils::treat(e, "Unable to create required directory"))?;
@@ -267,17 +361,25 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     let processed_count = atomic::AtomicUsize::new(0);
     let app_handle = app.clone();
 
-    let results: Result<Vec<utils::Item>, String> = items
-        .par_iter()
-        .map(|item| {
-            let result = prepare_item(item, &originals_dir, &thumbs_dir, &adjustments_dir, delete_source);
-            
-            let current = processed_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
-            let _ = app_handle.emit("import-progress", current);
+    let app_handle_clone = app_handle.clone();
+    let original_dir_clone = originals_dir.clone();
+    let thumbs_dir_clone = thumbs_dir.clone();
+    let adjustments_dir_clone = adjustments_dir.clone();
+    let processed_count = Arc::new(processed_count);
 
-            result
-        })
-        .collect();
+    let results: Result<Vec<modules::Item>, String> = spawn_blocking(move || {
+        items
+            .par_iter()
+            .map(|item| {
+                let result = prepare_item(&app_handle_clone, item, &original_dir_clone, &thumbs_dir_clone, &adjustments_dir_clone, delete_source);
+                
+                let current = processed_count.fetch_add(1, atomic::Ordering::Relaxed) + 1;
+                let _ = app_handle_clone.emit("import-progress", current);
+
+                result
+            })
+            .collect()
+    }).await.map_err(|e| utils::treat(e, "Task join error"))?;
 
     let processed_items = results.map_err(|e| utils::treat(e, "Unable to prepare items"))?;
 
@@ -303,9 +405,10 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
                 raw_original_name,
                 raw_file_size,
                 raw_checksum,
+                raw_live_video,
                 has_adjustments,
                 created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)"
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)"
         ).map_err(|e| utils::treat(e, "Unable to prepare statement"))?;
 
         for item in &processed_items {
@@ -326,6 +429,7 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
                 item.raw_original_name,
                 item.raw_file_size,
                 item.raw_checksum,
+                item.raw_live_video,
                 item.has_adjustments as i32,
                 item.created_at.to_rfc3339()
             ]).map_err(|e| utils::treat(e, "Unable to import item to the library"))?;
@@ -337,7 +441,7 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<utils::Imp
     Ok(processed_items)
 }
 
-fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_dir: &Path, adjustments_dir: &Path, delete_source: bool) -> Result<utils::Item, String> {
+fn prepare_item(app: &AppHandle, import_item: &modules::ImportItem, originals_dir: &Path, thumbs_dir: &Path, adjustments_dir: &Path, delete_source: bool) -> Result<modules::Item, String> {
     let source_path = Path::new(&import_item.source_path);
     if !source_path.exists() {
         return Err(format!("Source file does not exist: {}", import_item.source_path));
@@ -351,49 +455,117 @@ fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_di
     let checksum = format!("{:x}", md5::compute(&file_data));
     let file_size = file_data.len() as u64;
 
-    let mut image = utils::load_image(&file_data, file_extension)?;
+    let item_id = Uuid::new_v4().to_string();
+    let file_name = format!("{}.{}", item_id, file_extension);
+    let dest_path = originals_dir.join(&file_name);
 
-    if ["jpg", "jpeg"].contains(&file_extension.to_lowercase().as_str()) {
-        if let Ok(reader) = exif::Reader::new().read_from_container(&mut Cursor::new(&file_data)) {
-            if let Some(orientation_field) = reader.get_field(exif::Tag::Orientation, exif::In::PRIMARY) {
-                let orientation = orientation_field.value.get_uint(0).unwrap_or(1);
+    fs::copy(source_path, &dest_path).map_err(|e| utils::treat(e, "Unable to copy item"))?;
 
-                image = match orientation {
-                    2 => image.fliph(),
-                    3 => image.rotate180(),
-                    4 => image.flipv(),
-                    5 => image.rotate90().fliph(),
-                    6 => image.rotate90(),
-                    7 => image.rotate270().fliph(),
-                    8 => image.rotate270(),
-                    _ => image,
-                };
+    let width;
+    let height;
+    let mut duration = 0;
+
+    if !utils::map_extension_to_mime(file_extension).starts_with("video/") {
+        let mut image = utils::load_image(&file_data, file_extension)?;
+
+        if ["jpg", "jpeg"].contains(&file_extension.to_lowercase().as_str()) {
+            if let Ok(reader) = exif::Reader::new().read_from_container(&mut Cursor::new(&file_data)) {
+                if let Some(orientation_field) = reader.get_field(exif::Tag::Orientation, exif::In::PRIMARY) {
+                    let orientation = orientation_field.value.get_uint(0).unwrap_or(1);
+
+                    image = match orientation {
+                        2 => image.fliph(),
+                        3 => image.rotate180(),
+                        4 => image.flipv(),
+                        5 => image.rotate90().fliph(),
+                        6 => image.rotate90(),
+                        7 => image.rotate270().fliph(),
+                        8 => image.rotate270(),
+                        _ => image,
+                    };
+                }
+            }
+        }
+
+        let (w, h) = image.dimensions();
+        width = w;
+        height = h;
+        
+        let thumb_path = thumbs_dir.join(format!("{}.webp", item_id));
+        utils::generate_image_thumbnail(&image, &thumb_path)?;
+    } else {
+        let (w, h, d) = utils::get_video_metadata(app, source_path)?;
+        width = w;
+        height = h;
+        duration = d;
+
+        let thumb_path = thumbs_dir.join(format!("{}.webp", item_id));
+        utils::generate_video_thumbnail(app, source_path, &thumb_path)?;
+    }
+
+    let mut raw_original_name: Option<String> = None;
+    let mut raw_file_size: Option<u64> = None;
+    let mut raw_checksum: Option<String> = None;
+
+    if let Some(original_source_path) = &import_item.original_source_path {
+        let original_source_path = Path::new(original_source_path);
+        if original_source_path.exists() {
+            if let Ok(orig_data) = fs::read(original_source_path) {
+                raw_file_size = Some(orig_data.len() as u64);
+                raw_checksum = Some(format!("{:x}", md5::compute(&orig_data)));
+            }
+
+            if let Some(orig_name) = original_source_path.file_name().and_then(|n| n.to_str()) {
+                raw_original_name = Some(orig_name.to_string());
+            }
+
+            let orig_ext = original_source_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+            let orig_dest_name = format!("{}-orig.{}", item_id, orig_ext);
+            fs::copy(original_source_path, originals_dir.join(&orig_dest_name)).map_err(|e| utils::treat(e, "Unable to copy original item"))?;
+
+            if delete_source {
+                let _ = fs::remove_file(original_source_path);
             }
         }
     }
 
-    let (width, height) = image.dimensions();
-    let item_id = Uuid::new_v4().to_string();
-    let file_name = format!("{}.{}", item_id, file_extension);
+    if let Some(adjustments_path) = &import_item.adjustments_path {
+        let adjustments_path = Path::new(adjustments_path);
+        if adjustments_path.exists() {
+            fs::copy(adjustments_path, adjustments_dir.join(format!("{}.AAE", item_id))).map_err(|e| utils::treat(e, "Unable to copy adjustments"))?;
 
-    let dest_path = originals_dir.join(&file_name);
-    fs::copy(source_path, &dest_path).map_err(|e| utils::treat(e, "Unable to copy item"))?;
-
-    let thumb_path = thumbs_dir.join(format!("{}.webp", item_id));
-    generate_thumbnail(&image, &thumb_path)?;
+            if delete_source {
+                let _ = fs::remove_file(adjustments_path);
+            }
+        }
+    }
 
     let mut live_video_name: Option<String> = None;
-    if let Some(live_video_src) = &import_item.live_video_path {
-        let lv_src_path = Path::new(live_video_src);
-        if lv_src_path.exists() {
-            let lv_ext = lv_src_path.extension().and_then(|e| e.to_str()).unwrap_or("mov");
+    if let Some(live_path) = &import_item.live_path {
+        let live_path = Path::new(live_path);
+        if live_path.exists() {
+            let lv_ext = live_path.extension().and_then(|e| e.to_str()).unwrap_or("mov");
             let lv_name = format!("{}.{}", item_id, lv_ext);
-            let lv_dest = originals_dir.join(&lv_name);
-            fs::copy(lv_src_path, &lv_dest).map_err(|e| utils::treat(e, "Unable to copy live video"))?;
+            fs::copy(live_path, originals_dir.join(&lv_name)).map_err(|e| utils::treat(e, "Unable to copy live video"))?;
             live_video_name = Some(lv_name);
-            
+
             if delete_source {
-                let _ = fs::remove_file(lv_src_path);
+                let _ = fs::remove_file(live_path);
+            }
+        }
+    }
+
+    let mut original_live_video_name: Option<String> = None;
+    if let Some(original_live_path) = &import_item.original_live_path {
+        let original_live_path = Path::new(original_live_path);
+        if original_live_path.exists() {
+            let olv_ext = original_live_path.extension().and_then(|e| e.to_str()).unwrap_or("mov");
+            let olv_name = format!("{}-orig.{}", item_id, olv_ext);
+            fs::copy(original_live_path, originals_dir.join(&olv_name)).map_err(|e| utils::treat(e, "Unable to copy original live video"))?;
+            original_live_video_name = Some(olv_name);
+
+            if delete_source {
+                let _ = fs::remove_file(original_live_path);
             }
         }
     }
@@ -402,7 +574,7 @@ fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_di
         let _ = fs::remove_file(source_path);
     }
 
-    Ok(utils::Item {
+    Ok(modules::Item {
         id: item_id,
         original_name: original_name.to_string(),
         file_ext: file_extension.to_string(),
@@ -419,7 +591,8 @@ fn prepare_item(import_item: &utils::ImportItem, originals_dir: &Path, thumbs_di
         raw_original_name,
         raw_file_size,
         raw_checksum,
-        has_adjustments: import_item.aae_record_path.is_some(),
+        raw_live_video: original_live_video_name,
+        has_adjustments: import_item.adjustments_path.is_some(),
         created_at: Utc::now()
     })
 }
@@ -455,7 +628,7 @@ fn generate_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), Stri
 }
 
 #[tauri::command]
-pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<utils::Album>, String> {
+pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<modules::Album>, String> {
     let conn = get_db_connection(&app, &library_id)?;
     let mut stmt = conn.prepare("SELECT * FROM album WHERE parent IS ?1 ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
 
@@ -470,12 +643,12 @@ pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) ->
 }
 
 #[tauri::command]
-pub fn create_album(app: AppHandle, library_id: String, name: String, description: String, parent: Option<String>, icon: Option<String>, color: Option<String>) -> Result<utils::Album, String> {
+pub fn create_album(app: AppHandle, library_id: String, name: String, description: String, parent: Option<String>, icon: Option<String>, color: Option<String>) -> Result<modules::Album, String> {
     let conn = get_db_connection(&app, &library_id)?;
     let album_id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    let album = utils::Album {
+    let album = modules::Album {
         id: album_id.clone(),
         name: name.clone(),
         description: description.clone(),
@@ -535,7 +708,7 @@ pub fn remove_items_from_album(app: AppHandle, library_id: String, album_id: Str
 }
 
 #[tauri::command]
-pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<utils::ItemAlbumRef>, String> {
+pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<modules::ItemAlbumRef>, String> {
     let conn = get_db_connection(&app, &library_id)?;
 
     let mut stmt = conn.prepare(

@@ -35,7 +35,7 @@ export function NotificationCenter() {
                 <div className="pb-2">
                     <AnimatePresence initial={false} mode="popLayout">
                         {notifications.length > 0 ? (
-                            notifications.map(noti => <NotificationItem key={noti.id} notification={noti} />)
+                            notifications.map((noti, i) => <NotificationItem key={noti.id} notification={noti} i={i} />)
                         ) : (
                             <motion.div
                                 initial={{ height: 0, paddingBlock: 0, opacity: 0 }}
@@ -56,7 +56,7 @@ export function NotificationCenter() {
     );
 }
 
-function NotificationItem({ notification }: { notification: Notification }) {
+function NotificationItem({ notification, i }: { notification: Notification; i: number }) {
     const { clearNoti } = useNotifications();
 
     const nProgress = notification.progress * 100;
@@ -64,7 +64,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
     return (
         <motion.div
             layout
-            animate={{ opacity: 1, x: 0, height: "auto", marginTop: 4 }}
+            animate={{ opacity: 1, x: 0, height: "auto", marginTop: i ? 4 : 0 }}
             exit={{
                 x: "100%",
                 opacity: 0,
@@ -75,7 +75,7 @@ function NotificationItem({ notification }: { notification: Notification }) {
                 overflow: "hidden",
             }}
             transition={{ duration: 0.2 }}
-            className="px-2 pt-1.5 pb-2 flex flex-col gap-1 hover:bg-foreground/3 rounded-sm group transition-colors"
+            className="px-2 pt-1.5 pb-2 flex flex-col gap-1 hover:bg-muted/40 rounded-sm group transition-colors"
         >
             <div className="w-full flex items-center gap-2">
                 {getNotiIcon(notification.type)}

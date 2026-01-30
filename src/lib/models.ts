@@ -23,6 +23,7 @@ export interface Item {
     raw_original_name?: string;
     raw_file_size?: number;
     raw_checksum?: string;
+    raw_live_video?: string;
     has_adjustments: boolean;
     created_at: string;
 }
@@ -35,30 +36,33 @@ export interface Album {
     id: string;
     name: string;
     description: string;
-    parent: string | null;
+    parent?: string;
     selected_cover: number;
-    icon: string | null;
-    color: string | null;
-    cover_photo: string | null;
+    icon?: string;
+    color?: string;
+    cover_photo?: string;
     created_at: string;
 }
 
 export interface ImportItem {
     source_path: string;
-    live_video_path: string | null;
+    live_path?: string;
     original_source_path?: string;
-    original_live_video_path?: string;
-    aae_record_path?: string;
+    original_live_path?: string;
+    adjustments_path?: string;
 }
 
 export interface ImportCandidate {
     items_to_import: ImportItem[];
-    conflicts: Conflict[];
+    conflicts: Group[];
 }
 
-export interface Conflict {
-    photo_path: string;
-    video_candidates: string[];
+export interface Group {
+    original_items: string[];
+    edited_items: string[];
+    original_videos: string[];
+    edited_videos: string[];
+    adjustments?: string;
 }
 
 export interface Notification {
@@ -85,5 +89,16 @@ export type Settings = {
         edits: boolean;
     };
 };
+
+export interface LibraryDetails {
+    name: string;
+    icon: string;
+    color: string;
+    count: number;
+}
+
+export interface LibraryDetailsPath extends LibraryDetails {
+    path: string;
+}
 
 export const appColors = ["red", "orange", "amber", "yellow", "lime", "green", "emerald", "teal", "blue", "sky", "dark-blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose"];

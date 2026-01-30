@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import colors from "tailwindcss/colors";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,7 +30,7 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess 
 
         if (!selectedLibrary) return;
 
-        const { data, error } = await createAlbum({
+        const { data } = await createAlbum({
             libraryId: selectedLibrary.id,
             name: albumName,
             description: "",
@@ -38,7 +38,8 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess 
             color: albumColor,
             icon: albumEmoji,
         });
-        if (!error)
+
+        if (data)
             onSuccess?.(data);
 
         onOpenChange(false);
@@ -76,13 +77,13 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess 
                         </Field>
                     </FieldGroup>
                 </FieldSet>
-                <div className="flex justify-end gap-2">
+                <DialogFooter>
                     <Button variant="outline" disabled={isProcessing} onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button className="w-30 flex justify-center relative" onClick={handleCreateAlbum} disabled={!albumName.trim() || !albumColor.trim() || !albumEmoji.trim() || isProcessing}>
                         <span className={isProcessing ? "opacity-0" : ""}>Create Album</span>
                         <Spinner className={`absolute ${!isProcessing ? "opacity-0" : "opacity-100"}`} />
                     </Button>
-                </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

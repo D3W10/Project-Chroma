@@ -17,7 +17,7 @@ import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useStack } from "@/lib/useStack";
 import { cva } from "@/lib/utils";
-import type { Album, ItemAlbumRef } from "@/lib/models";
+import type { Album, ItemAlbumRef, Settings } from "@/lib/models";
 
 export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
@@ -177,7 +177,7 @@ function GridEmpty({ id, onAdd }: { id?: string; onAdd: () => unknown }) {
 interface GridItemProps {
     item: Album;
     selected: boolean;
-    viewmode: Layout;
+    viewmode: Settings["albumLayout"];
     onClick?: React.MouseEventHandler<HTMLElement>;
     onDoubleClick?: React.MouseEventHandler<HTMLElement>;
     onContextMenu?: React.MouseEventHandler<HTMLElement>;

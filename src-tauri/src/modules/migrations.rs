@@ -33,8 +33,8 @@ fn upgrade_error(e: Error) -> String {
 }
 
 static UPGRADES: &[fn(&mut Transaction) -> Result<(), String>] = &[
-    /* |tx| {
-        log::info!("Migrating library to v1");
-        Ok(())
-    }, */
+    // |tx| {
+    //     log::info!("Migrating library to v1");
+    //     Ok(())
+    // }
 ];

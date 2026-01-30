@@ -1,10 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { animate } from "@/components/animated";
-import { AppMockup } from "@/components/custom/AppMockup";
-import { OnboardingLayout } from "@/components/layout/onboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { Slider } from "@/components/ui/slider";
+import { AppMockup } from "@/components/custom/AppMockup";
+import { OnboardingLayout } from "@/components/layout/onboardingLayout";
 import { defaultSettings, useSettings } from "@/lib/useSettings";
 import { IconReload } from "@tabler/icons-react";
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlbumCover } from "@/components/custom/AlbumCover";
 import { getAlbums } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
@@ -61,7 +61,7 @@ export function SelectAlbumDialog({ open, onOpenChange, onSuccess }: SelectAlbum
                     <DialogTitle>Select album</DialogTitle>
                     <DialogDescription>Select the album to add the items to</DialogDescription>
                 </DialogHeader>
-                <div className="h-64 flex flex-col bg-foreground/3 rounded-xl ring-1 ring-input overflow-y-auto">
+                <div className="h-64 flex flex-col bg-muted/40 rounded-xl ring-1 ring-input overflow-y-auto">
                     {currentAlbum && (
                         <Button variant="ghost" className="w-full h-8 flex justify-start px-3 border-b border-input/30 rounded-t-xl rounded-b-none" onClick={navigateBack}>
                             <IconChevronLeft className="size-4 text-muted-foreground" />
@@ -83,10 +83,10 @@ export function SelectAlbumDialog({ open, onOpenChange, onSuccess }: SelectAlbum
                         <p className="size-full flex items-center justify-center text-muted-foreground font-medium">No albums in here</p>
                     )}
                 </div>
-                <div className="flex justify-end gap-2">
+                <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
                     <Button disabled={!selected} onClick={handleSelect}>Add items</Button>
-                </div>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

@@ -3,7 +3,7 @@ name = "project-chroma"
 version = "0.1.0"
 description = "A Tauri App"
 authors = ["D3W10"]
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "project_chroma_lib"

@@ -23,6 +23,8 @@ pub fn run() {
             library::check_library_health,
             library::upgrade_library,
             library::create_library,
+            library::get_library_info_from_path,
+            library::add_library,
             library::get_items,
             library::verify_conflicts,
             library::add_items,

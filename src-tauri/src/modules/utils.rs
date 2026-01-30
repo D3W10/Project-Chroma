@@ -3,82 +3,13 @@ use image::{DynamicImage, ImageFormat};
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 use log;
 use rusqlite::Row;
-use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::fs;
 use std::path::Path;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Item {
-    pub id: String,
-    pub original_name: String,
-    pub file_ext: String,
-    pub file_type: String,
-    pub file_size: u64,
-    pub width: u32,
-    pub height: u32,
-    pub duration: u64,
-    pub checksum: String,
-    pub is_favorite: bool,
-    pub is_screenshot: bool,
-    pub is_screen_recording: bool,
-    pub live_video: Option<String>,
-    pub raw_original_name: Option<String>,
-    pub raw_file_size: Option<u64>,
-    pub raw_checksum: Option<String>,
-    pub has_adjustments: bool,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ItemAlbumRef {
-    #[serde(flatten)]
-    pub item: Item,
-    pub added_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Album {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub parent: Option<String>,
-    pub selected_cover: u8,
-    pub icon: Option<String>,
-    pub color: Option<String>,
-    pub cover_photo: Option<String>,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct AlbumItem {
-    pub album_id: String,
-    pub item_id: String,
-    pub added_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ImportItem {
-    pub source_path: String,
-    pub live_video_path: Option<String>,
-    pub original_source_path: Option<String>,
-    pub original_live_video_path: Option<String>,
-    pub aae_record_path: Option<String>,
-}
-
-#[derive(Serialize)]
-pub struct ImportCandidate {
-    pub items_to_import: Vec<ImportItem>,
-    pub conflicts: Vec<Conflict>,
-}
-
-#[derive(Serialize)]
-pub struct Conflict {
-    pub photo_path: String,
-    pub video_candidates: Vec<String>,
-}
+use crate::modules;
 
 pub fn treat<E: Display>(e: E, msg: &str) -> String {
     log::error!("{}: {}", msg, e);
@@ -131,8 +62,8 @@ pub fn load_image(data: &Vec<u8>, ext: &str) -> Result<image::DynamicImage, Stri
     }
 }
 
-pub fn deserialize_item(row: &Row<'_>) -> Result<Item, rusqlite::Error> {
-    Ok(Item {
+pub fn deserialize_item(row: &Row<'_>) -> Result<modules::Item, rusqlite::Error> {
+    Ok(modules::Item {
         id: row.get(0)?,
         original_name: row.get(1)?,
         file_ext: row.get(2)?,
@@ -149,20 +80,21 @@ pub fn deserialize_item(row: &Row<'_>) -> Result<Item, rusqlite::Error> {
         raw_original_name: row.get::<_, Option<String>>(13)?,
         raw_file_size: row.get::<_, Option<u64>>(14)?,
         raw_checksum: row.get::<_, Option<String>>(15)?,
-        has_adjustments: row.get::<_, i32>(16)? != 0,
-        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(17)?).unwrap().with_timezone(&Utc),
+        raw_live_video: row.get::<_, Option<String>>(16)?,
+        has_adjustments: row.get::<_, i32>(17)? != 0,
+        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(18)?).unwrap().with_timezone(&Utc),
     })
 }
 
-pub fn deserialize_item_album_ref(row: &Row<'_>) -> Result<ItemAlbumRef, rusqlite::Error> {
-    Ok(ItemAlbumRef {
+pub fn deserialize_item_album_ref(row: &Row<'_>) -> Result<modules::ItemAlbumRef, rusqlite::Error> {
+    Ok(modules::ItemAlbumRef {
         item: deserialize_item(row)?,
-        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(18)?).unwrap().with_timezone(&Utc),
+        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(19)?).unwrap().with_timezone(&Utc),
     })
 }
 
-pub fn deserialize_album(row: &Row<'_>) -> Result<Album, rusqlite::Error> {
-    Ok(Album {
+pub fn deserialize_album(row: &Row<'_>) -> Result<modules::Album, rusqlite::Error> {
+    Ok(modules::Album {
         id: row.get(0)?,
         name: row.get(1)?,
         description: row.get(2)?,

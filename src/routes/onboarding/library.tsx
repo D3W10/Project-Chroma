@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { animate } from "@/components/animated";
-import { useLibraryCreate, LibraryCreate } from "@/components/custom/LibraryCreate";
-import { OnboardingLayout } from "@/components/layout/onboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLibraryCreate, LibraryCreate } from "@/components/custom/LibraryCreate";
+import { OnboardingLayout } from "@/components/layout/onboardingLayout";
 
 export const Route = createFileRoute("/onboarding/library")({
     component: RouteComponent,

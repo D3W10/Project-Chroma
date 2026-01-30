@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tryCatch } from "./utils";
-import type { Album, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings } from "./models";
+import type { Album, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails } from "./models";
 
 export function getLibraries() {
     return tryCatch(() => invoke<Library[]>("get_libraries"));
@@ -40,6 +40,14 @@ export function upgradeLibrary(opts: { libraryId: string }) {
 
 export function createLibrary(opts: { name: string; icon: string; color: string; path: string }) {
     return tryCatch(() => invoke<Library>("create_library", opts));
+}
+
+export function getLibraryInfoFromPath(opts: { path: string }) {
+    return tryCatch(() => invoke<LibraryDetails>("get_library_info_from_path", opts));
+}
+
+export function addLibrary(opts: { path: string }) {
+    return tryCatch(() => invoke<Library>("add_library", opts));
 }
 
 export function getItems(opts: { libraryId: string }) {

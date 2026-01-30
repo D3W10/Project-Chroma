@@ -41,6 +41,23 @@ function createAnimatedComponent<Tag extends keyof HTMLElementTagNameMap>(elemen
     return AnimatedComponent;
 }
 
+export type Direction = 1 | -1;
+
+export const slideVariants = {
+    initial: (direction: Direction) => ({
+        x: `${direction * 101}%`,
+        opacity: 0,
+    }),
+    target: {
+        x: 0,
+        opacity: 1,
+    },
+    exit: (direction: Direction) => ({
+        x: `${direction * -101}%`,
+        opacity: 0,
+    }),
+};
+
 export const animate = {
     div: createAnimatedComponent("div"),
     h1: createAnimatedComponent("h1"),

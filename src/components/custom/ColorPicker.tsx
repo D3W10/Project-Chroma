@@ -1,8 +1,11 @@
 import { useState, type CSSProperties } from "react";
 import colors from "tailwindcss/colors";
+import { IconHelpCircle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import { FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, isValidColor } from "@/lib/utils";
 
 interface ColorPickerProps extends React.ComponentProps<"div"> {
@@ -51,8 +54,25 @@ export function ColorPicker({ className, disabled, color, onColorSelect, ...prop
                 <PopoverTrigger asChild>
                     <Button variant="link" className={cn("h-6 p-0 relative flex-1 rounded-md hover:opacity-80 before:block before:absolute before:inset-0.5 before:rounded-sm before:transition-shadow", customColor && color ? "bg-(--custom-color) before:inset-ring-2 before:inset-ring-background" : "bg-(image:--rainbow)")} disabled={disabled} onClick={customSelected} style={{ "--custom-color": color } as CSSProperties} />
                 </PopoverTrigger>
-                <PopoverContent className="p-2 rounded-2xl">
-                    <Input placeholder="oklch(0.75 0.17 209)" defaultValue={customColor ? color : ""} maxLength={25} onInput={validate} />
+                <PopoverContent className="p-2 gap-2 rounded-2xl">
+                    <FieldLabel className="pl-0.5">
+                        Custom Color
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <IconHelpCircle className="size-4.5 text-primary" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Supports hex, rgba, hsl, oklch and many more.
+                                <ul className="list-disc pl-4">
+                                    <li>red</li>
+                                    <li>#088fff</li>
+                                    <li>rgb(125 8 186)</li>
+                                    <li>hsl(25 100% 50%)</li>
+                                </ul>
+                            </TooltipContent>
+                        </Tooltip>
+                    </FieldLabel>
+                    <Input placeholder="#00c9e7" defaultValue={customColor ? color : ""} maxLength={25} autoCorrect="off" onInput={validate} />
                 </PopoverContent>
             </Popover>
         </div>
