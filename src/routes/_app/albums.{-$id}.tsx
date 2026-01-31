@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AlbumCover } from "@/components/custom/AlbumCover";
 import { IconBox } from "@/components/custom/IconBox";
+import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { AlbumContextMenu } from "@/components/overlays/AlbumContextMenu";
 import { CreateAlbumDialog } from "@/components/overlays/CreateAlbumDialog";
 import { getAlbumItems, getAlbums } from "@/lib/invoker";
@@ -89,8 +90,8 @@ function RouteComponent() {
 
     return (
         <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
-            <div className="p-2 flex justify-between items-center sticky top-0 left-0 right-0 z-10 before:absolute before:inset-0 before:backdrop-blur-xs before:mask-b-from-25% before:-z-10 after:absolute after:inset-0 after:-bottom-4 after:bg-background/70 after:mask-b-from-20% after:-z-20">
-                <div className="flex gap-2">
+            <Toolbar placement="full">
+                <ToolbarGroup>
                     <Button onClick={() => setOpenCreateAlbum(true)}>
                         <IconFolderPlus className="size-4 mr-0.5" />
                         Create album
@@ -101,8 +102,8 @@ function RouteComponent() {
                         </Button>
                     )}
                     <CreateAlbumDialog currentAlbum={id} open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} onSuccess={onCreateSuccess} />
-                </div>
-                <div className="flex gap-2">
+                </ToolbarGroup>
+                <ToolbarGroup>
                     <ButtonGroup>
                         <Button variant="outline" size="icon" disabled={selected.length !== 1}>
                             <IconPencil className="size-5" />
@@ -119,8 +120,8 @@ function RouteComponent() {
                             <IconListDetails className="size-5" />
                         </Button>
                     </ButtonGroup>
-                </div>
-            </div>
+                </ToolbarGroup>
+            </Toolbar>
             <div className={gridStyles({ layout: settings.albumLayout, grid: isPending || albums.length > 0 })}>
                 {isPending && <GridLoading />}
                 {albums.length > 0 ? albums.map((p, i) => (

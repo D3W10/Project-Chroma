@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { IconBox } from "@/components/custom/IconBox";
-import { Toolbar } from "@/components/custom/Toolbar";
+import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { ImportItemsDialog } from "@/components/overlays/ImportItemsDialog";
 import { ItemContextMenu } from "@/components/overlays/ItemContextMenu";
 import { DeleteItemDialog } from "@/components/overlays/DeleteItemDialog";
@@ -100,8 +100,8 @@ function RouteComponent() {
 
     return (
         <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
-            <Toolbar>
-                <div className="flex gap-2">
+            <Toolbar placement="full">
+                <ToolbarGroup>
                     <Button onClick={() => setOpenAddItems(true)}>
                         <IconPlus className="size-4 mr-0.5" />
                         Import items
@@ -109,8 +109,8 @@ function RouteComponent() {
                     <ImportItemsDialog openDialog={openAddItems} onOpenChange={setOpenAddItems} />
                     <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={addToAlbum} />
                     <DeleteItemDialog open={deleteItemDialog} onOpenChange={setDeleteItemDialog} items={selected} onConfirm={deleteSelected} />
-                </div>
-                <div className="flex gap-2">
+                </ToolbarGroup>
+                <ToolbarGroup>
                     <ButtonGroup>
                         <Button variant="outline" size="icon" disabled={items.length === 0 || settings.libraryZoom === 0} onClick={() => updateSettings({ libraryZoom: settings.libraryZoom - 1 })}>
                             <IconPlus className="size-5" />
@@ -138,7 +138,7 @@ function RouteComponent() {
                             <IconShare2 className="size-5" />
                         </Button>
                     </ButtonGroup>
-                </div>
+                </ToolbarGroup>
             </Toolbar>
             <div className={`w-full min-h-0 p-2 pt-14 ${isPending || items.length > 0 ? "grid gap-1" : "h-full flex justify-center items-center"} ${gridSizes[settings.libraryZoom]} absolute`}>
                 {isPending && <GridLoading />}
