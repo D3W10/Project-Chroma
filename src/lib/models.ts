@@ -102,3 +102,5 @@ export interface LibraryDetailsPath extends LibraryDetails {
 }
 
 export const appColors = ["red", "orange", "amber", "yellow", "lime", "green", "emerald", "teal", "blue", "sky", "dark-blue", "indigo", "violet", "purple", "fuchsia", "pink", "rose"];
+export const gridSizes = ["grid-cols-3", "grid-cols-5", "grid-cols-7", "grid-cols-9"];
+export const gridSizesNum = [3, 5, 7, 9];

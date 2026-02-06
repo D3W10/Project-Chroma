@@ -54,3 +54,6 @@ export function isValidColor(color: string) {
 
     return !!isValid;
 }
+
+export const pathToName = (p: string) => p.split("/").pop() || "";
+export const pathToStem = (p: string) => /([^/\\]+?)(?:\.[^.]*$|$)/g.exec(p)?.[1] || "";

@@ -20,7 +20,7 @@ import { verifyConflicts, addItems } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { useSettings } from "@/lib/useSettings";
-import { unwrapResult } from "@/lib/utils";
+import { pathToName, pathToStem, unwrapResult } from "@/lib/utils";
 import type { Group, ImportItem } from "@/lib/models";
 
 export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: boolean; onOpenChange: (open: boolean) => void }) {
@@ -308,8 +308,6 @@ function ConflictPage({ conflicts, existingItems, livePhotos, edits, onResolve }
     const getAllVideos = (g: Group, o: boolean = false) => !o
         ? [...g.edited_videos, ...g.original_videos]
         : [...g.original_videos, ...g.edited_videos];
-    const pathToName = (p: string) => p.split("/").pop() || "";
-    const pathToStem = (p: string) => /([^/\\]+?)(?:\.[^.]*$|$)/g.exec(p)?.[1] || "";
     const getAllUsedPaths = () => importGroups.flat().flatMap(g => Object.values(g));
     const getConflictName = (g: Group) => {
         if (g.original_items.length) return pathToStem(g.original_items[0]);

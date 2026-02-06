@@ -75,7 +75,7 @@ function RouteComponent() {
     }
 
     return (
-        <div className="flex justify-center items-center flex-1">
+        <div className="min-h-0 flex justify-center items-center flex-1">
             <Sidebar collapsed={!successLoaded} />
             <div className={cn("h-full flex flex-col flex-1 bg-background ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200", successLoaded ? "rounded-tl-xl" : "")}>
                 {successLoaded && selectedLibrary ? (
