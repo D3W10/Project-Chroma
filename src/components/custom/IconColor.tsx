@@ -11,6 +11,7 @@ const iconColorVariants = cva(
                 md: "size-8 text-md rounded-sm ring-2",
                 lg: "size-10 text-lg rounded-md ring-3",
                 xl: "size-12 text-xl rounded-lg ring-3",
+                "2xl": "size-22 text-5xl rounded-xl ring-4",
             },
         },
         defaultVariants: {
@@ -21,8 +22,8 @@ const iconColorVariants = cva(
 
 export function IconColor({ className, size, children, color, ...props }: React.ComponentProps<"div"> & VariantProps<typeof iconColorVariants> & { color?: string }) {
     return (
-        <div className={cn(iconColorVariants({ size, className }))} {...props} style={{ "--lib-color": color ?? "#000" } as CSSProperties}>
-            <span>{children}</span>
+        <div className={cn(iconColorVariants({ size, className }))} {...props} style={{ "--lib-color": color ?? "var(--color-slate-500)" } as CSSProperties}>
+            {children ?? "📁"}
         </div>
     );
 }

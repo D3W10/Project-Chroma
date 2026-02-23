@@ -3,8 +3,9 @@ use serde::{Deserialize, Serialize};
 
 pub mod config;
 pub mod library;
-pub mod utils;
+pub mod db;
 pub mod migrations;
+pub mod utils;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Item {
@@ -17,6 +18,7 @@ pub struct Item {
     pub height: u32,
     pub duration: u64,
     pub checksum: String,
+    pub taken_date: DateTime<Utc>,
     pub is_favorite: bool,
     pub is_screenshot: bool,
     pub is_screen_recording: bool,
@@ -43,10 +45,20 @@ pub struct Album {
     pub description: String,
     pub parent: Option<String>,
     pub selected_cover: u8,
+    pub selected_banner: u8,
     pub icon: Option<String>,
     pub color: Option<String>,
     pub cover_photo: Option<String>,
+    pub banner_photo: Option<String>,
     pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AlbumComp {
+    #[serde(flatten)]
+    pub album: Album,
+    pub size: u64,
+    pub peek_thumbs: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

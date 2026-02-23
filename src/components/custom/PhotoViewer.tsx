@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { motion } from "motion/react";
 import { TransformComponent, TransformWrapper, useControls } from "react-zoom-pan-pinch";
 import { IconArrowsMaximize, IconArrowsMinimize, IconChevronLeft, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconLivePhoto, IconMinus, IconPlus, IconShare2 } from "@tabler/icons-react";
@@ -8,7 +7,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
-import { cn } from "@/lib/utils";
+import { cn, getOriginalPath } from "@/lib/utils";
 import type { Item } from "@/lib/models";
 
 interface PhotoViewerProps {
@@ -75,7 +74,7 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                     {item && (
                         <motion.img
                             layoutId={`item-${item.id}`}
-                            src={convertFileSrc(selectedLibrary.path + "/originals/" + item.id + "." + item.file_ext)}
+                            src={getOriginalPath(item, selectedLibrary?.path)}
                             className="max-w-full max-h-full object-contain shadow-2xl pointer-events-auto z-2"
                         />
                     )}

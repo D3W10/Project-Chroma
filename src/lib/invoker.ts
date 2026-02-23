@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tryCatch } from "./utils";
-import type { Album, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails } from "./models";
+import type { Album, AlbumComp, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails } from "./models";
 
 export function getLibraries() {
     return tryCatch(() => invoke<Library[]>("get_libraries"));
@@ -66,12 +66,16 @@ export function setItemsFavorite(opts: { libraryId: string; itemIds: string[]; v
     return tryCatch(() => invoke("set_items_favorite", opts));
 }
 
+export function transferItems(opts: { sourceId: string; targetId: string; itemIds: string[]; doMove?: boolean }) {
+    return tryCatch(() => invoke("transfer_items", opts));
+}
+
 export function deleteItems(opts: { libraryId: string; itemIds: string[] }) {
     return tryCatch(() => invoke("delete_items", opts));
 }
 
 export function getAlbums(opts: { libraryId: string; parent?: string }) {
-    return tryCatch(() => invoke<Album[]>("get_albums", opts));
+    return tryCatch(() => invoke<AlbumComp[]>("get_albums", opts));
 }
 
 export function createAlbum(opts: { libraryId: string; name: string; description?: string; parent?: string; color: string; icon: string }) {

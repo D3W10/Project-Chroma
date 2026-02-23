@@ -16,6 +16,7 @@ export interface Item {
     height: number;
     duration: number;
     checksum: string;
+    taken_date: string;
     is_favorite: boolean;
     is_screenshot: boolean;
     is_screen_recording: boolean;
@@ -38,10 +39,17 @@ export interface Album {
     description: string;
     parent?: string;
     selected_cover: number;
+    selected_banner: number;
     icon?: string;
     color?: string;
     cover_photo?: string;
+    banner_photo?: string;
     created_at: string;
+}
+
+export interface AlbumComp extends Album {
+    size: number;
+    peek_thumbs: string[];
 }
 
 export interface ImportItem {
@@ -83,7 +91,6 @@ export type Settings = {
     accentColor: number;
     libraryZoom: number;
     libraryExpanded: boolean;
-    albumLayout: "card" | "grid" | "list";
     importOptions: {
         livePhotos: boolean;
         edits: boolean;

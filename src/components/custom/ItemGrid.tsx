@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { convertFileSrc } from "@tauri-apps/api/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { motion } from "motion/react";
 import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
@@ -8,23 +7,23 @@ import { gridSizes, gridSizesNum, type Item } from "@/lib/models";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSettings } from "@/lib/useSettings";
-import { cn, pathToStem } from "@/lib/utils";
+import { cn, getThumbPath, pathToStem } from "@/lib/utils";
 
-interface ItemGridProps {
-    items: Item[];
+interface ItemGridProps<T extends Item> {
+    items: T[];
     isPending: boolean;
-    selected: Item[];
     parent: React.RefObject<HTMLElement | null>;
-    viewingItem?: Item;
-    setViewingItem: (item?: Item) => unknown;
-    handleSelect: (event: React.MouseEvent<HTMLElement, MouseEvent>, index: number, item: Item) => unknown;
-    handleRightClick: (index: number, item: Item) => unknown;
-    onAddToAlbum: () => unknown;
-    onDelete: () => unknown;
+    isAlbum?: boolean;
+    selected: T[];
+    setSelected: (selected: T[]) => unknown;
+    viewingItem?: T;
+    setViewingItem: (item?: T) => unknown;
+    handleSelect: (event: React.MouseEvent<HTMLElement, MouseEvent>, index: number, item: T) => unknown;
+    handleRightClick: (index: number, item: T) => unknown;
     empty: React.ReactNode;
 }
 
-export function ItemGrid({ items, isPending, selected, parent, viewingItem, setViewingItem, handleSelect, handleRightClick, onAddToAlbum, onDelete, empty }: ItemGridProps) {
+export function ItemGrid<T extends Item>({ items, isPending, parent, isAlbum, selected, setSelected, viewingItem, setViewingItem, handleSelect, handleRightClick, empty }: ItemGridProps<T>) {
     const [lastViewingItem, setLastViewingItem] = useState(viewingItem);
     const { settings } = useSettings();
     const columns = gridSizesNum[settings.libraryZoom];
@@ -79,10 +78,9 @@ export function ItemGrid({ items, isPending, selected, parent, viewingItem, setV
                             return (
                                 <ItemContextMenu
                                     key={item.id}
+                                    isAlbum={isAlbum}
                                     selected={selected}
-                                    onMoveToLib={() => {}}
-                                    onAddToAlbum={onAddToAlbum}
-                                    onDelete={onDelete}
+                                    setSelected={setSelected}
                                 >
                                     <GridItem
                                         item={item}
@@ -122,7 +120,7 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
 
     const type = item.file_type.startsWith("image/") ? item.file_type !== "image/gif" ? "photo" : "gif" : "video";
 
-    function setItemFavorite(e: React.MouseEvent<HTMLElement, MouseEvent>) {
+    function setItemFavorite(e: React.MouseEvent) {
         e.stopPropagation();
         action.setItemsFavorite([item.id], !item.is_favorite);
     }
@@ -151,14 +149,14 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
                         <motion.img
                             layout
                             layoutId={`item-${item.id}`}
-                            src={convertFileSrc(selectedLibrary?.path + "/thumbnails/" + item.id + ".webp")}
-                            className={cn("size-full object-cover pointer-events-none", !expanded || selected ? "rounded-sm" : "rounded-xs", selected && "z-1")}
+                            src={getThumbPath(item.id, selectedLibrary?.path)}
+                            className={cn("size-full rounded-sm object-cover pointer-events-none", selected && "z-1")}
                             loading="lazy"
                             onError={() => setError(true)}
                         />
                     ) : undefined
                 ) : (
-                    <div className={cn("size-full p-2 flex flex-col justify-center items-center gap-1 text-center bg-muted pointer-events-none", !expanded || selected ? "rounded-sm" : "rounded-xs")}>
+                    <div className={cn("size-full p-2 flex flex-col justify-center items-center gap-1 text-center bg-muted rounded-sm pointer-events-none")}>
                         <p className="text-2xl">{type === "photo" ? "📸" : type === "gif" ? "👾" : "🎥"}</p>
                         <p className="w-full text-xs text-muted-foreground font-medium">{stem.slice(0, 15) + (stem.length > 15 ? "..." : "")}</p>
                     </div>

@@ -12,7 +12,6 @@ export const defaultSettings = {
     accentColor: 8,
     libraryZoom: 2,
     libraryExpanded: false,
-    albumLayout: "card",
     importOptions: {
         livePhotos: false,
         edits: false,

@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ColorPicker } from "@/components/custom/ColorPicker";
 import { EmojiPicker } from "@/components/custom/EmojiPicker";
+import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
-import { createAlbum } from "@/lib/invoker";
 import type { Album } from "@/lib/models";
 
 interface CreateAlbumDialogProps {
@@ -23,6 +23,7 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess 
     const [albumColor, setAlbumColor] = useState(colors.slate[500]);
     const [albumEmoji, setAlbumEmoji] = useState("📁");
     const [isProcessing, setIsProcessing] = useState(false);
+    const action = useAction();
     const { selectedLibrary } = useLibrary();
 
     async function handleCreateAlbum() {
@@ -30,15 +31,7 @@ export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess 
 
         if (!selectedLibrary) return;
 
-        const { data } = await createAlbum({
-            libraryId: selectedLibrary.id,
-            name: albumName,
-            description: "",
-            parent: currentAlbum,
-            color: albumColor,
-            icon: albumEmoji,
-        });
-
+        const data = await action.createAlbum(albumName, currentAlbum, albumColor, albumEmoji);
         if (data)
             onSuccess?.(data);
 

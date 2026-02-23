@@ -1,67 +1,82 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconChevronLeft, IconFolderPlus, IconGridDots, IconInfoCircle, IconLayoutGrid, IconListDetails, IconPencil } from "@tabler/icons-react";
+import { IconArrowAutofitHeight, IconChevronLeft, IconFilter2, IconFolderPlus, IconInfoCircle, IconMinus, IconPencil, IconPlus, IconShare2 } from "@tabler/icons-react";
+import { motion, useScroll, useTransform } from "motion/react";
 import { animate } from "@/components/animated";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
-import { AlbumCover } from "@/components/custom/AlbumCover";
+import { AlbumCard } from "@/components/custom/AlbumCard";
 import { IconBox } from "@/components/custom/IconBox";
+import { ItemGrid } from "@/components/custom/ItemGrid";
 import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { AlbumContextMenu } from "@/components/overlays/AlbumContextMenu";
 import { CreateAlbumDialog } from "@/components/overlays/CreateAlbumDialog";
 import { getAlbumItems, getAlbums } from "@/lib/invoker";
+import { gridSizes, type Album, type AlbumComp, type ItemAlbumRef } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useStack } from "@/lib/useStack";
-import { cva } from "@/lib/utils";
-import type { Album, ItemAlbumRef, Settings } from "@/lib/models";
+import { cn, getThumbPath, treatDataRefresh, type Result } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
 });
 
-const gridStyles = cva(
-    "w-full min-h-0 p-4 pt-16 absolute",
-    {
-        variants: {
-            layout: {
-                card: "grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 gap-4",
-                grid: "grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4",
-                list: "gap-3",
-            },
-            grid: {
-                true: "grid",
-                false: "h-full flex justify-center items-center",
-            },
-        },
-        defaultVariants: {
-            layout: "card",
-            grid: true,
-        },
-    },
-);
-
 function RouteComponent() {
-    const [albums, setAlbums] = useState<Album[]>([]);
-    const [viewmode, setViewmode] = useState<Layout>("card");
+    const [albums, setAlbums] = useState<AlbumComp[]>([]);
+    const [items, setItems] = useState<ItemAlbumRef[]>([]);
     const [openCreateAlbum, setOpenCreateAlbum] = useState(false);
     const { selectedLibrary } = useLibrary();
     const navigate = useNavigate();
     const { pushNoti } = useNotifications();
     const { id } = Route.useParams();
     const queryClient = useQueryClient();
-    const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: albums });
+    const gridParent = useRef<HTMLDivElement>(null);
+    const { scrollY } = useScroll({ container: gridParent });
+    const { selected: selectedAlbums, setSelected: setSelectedAlbums, handleSelect: handleSelectAlbumRef, handleRightClick: handleRightClickAlbum, unselectAll: unselectAllAlbums } = useSelection({ items: albums });
+    const { selected: selectedItems, setSelected: setSelectedItems, handleSelect: handleSelectItemRef, handleRightClick: handleRightClickItem, unselectAll: unselectAllItems } = useSelection({ items });
     const { settings, updateSettings } = useSettings();
     const stack = useStack<string>();
+    const bannerY = useTransform(scrollY, v => v * 0.3);
 
-    const { isPending, data } = useQuery({
+    const currentAlbum = useMemo(() => {
+        if (!id) return;
+
+        for (const [, data] of queryClient.getQueriesData<Result<Album[], string>>({ queryKey: [selectedLibrary?.id, "albums"] })) {
+            if (!data?.data) continue;
+
+            const found = data.data.find(a => a.id === id);
+
+            if (found) return found;
+        }
+
+        return;
+    }, [selectedLibrary?.id, id]);
+
+    const { isPending: isPendingA, data: dataA } = useQuery({
         queryKey: [selectedLibrary?.id, "albums", id],
         queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
     });
+
+    const { isPending: isPendingI, data: dataI } = useQuery({
+        queryKey: [selectedLibrary?.id, "albums", id, "items"],
+        queryFn: () => getAlbumItems({ libraryId: selectedLibrary?.id ?? "", albumId: id ?? "" }),
+        enabled: !!id,
+    });
+
+    const handleSelectAlbum = (event: React.MouseEvent, index: number, item: AlbumComp) => {
+        unselectAllItems();
+        handleSelectAlbumRef(event, index, item);
+    };
+
+    const handleSelectItem = (event: React.MouseEvent, index: number, item: ItemAlbumRef) => {
+        unselectAllAlbums();
+        handleSelectItemRef(event, index, item);
+    };
 
     function onCreateSuccess(album: Album) {
         queryClient.invalidateQueries({ queryKey: [selectedLibrary?.id, "albums", id] });
@@ -73,23 +88,21 @@ function RouteComponent() {
         navigate({ to: "/albums/" + album.id });
     }
 
+    function unselectAll(e: React.MouseEvent) {
+        unselectAllAlbums(e);
+        unselectAllItems(e);
+    }
+
     useEffect(() => {
-        const allAlbums = data?.data ?? [];
-        const newSelected: Album[] = [];
+        treatDataRefresh(dataA?.data, setAlbums, selectedAlbums, setSelectedAlbums);
+    }, [dataA]);
 
-        setAlbums(allAlbums);
-
-        selected.forEach(s => {
-            const newPic = allAlbums.find(p => p.id === s.id);
-            if (newPic)
-                newSelected.push(newPic);
-        });
-
-        setSelected(newSelected);
-    }, [data]);
+    useEffect(() => {
+        treatDataRefresh(dataI?.data, setItems, selectedItems, setSelectedItems);
+    }, [dataI]);
 
     return (
-        <div className="h-screen flex flex-col flex-1 relative overflow-y-auto" onClick={unselectAll}>
+        <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isPendingA && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
             <Toolbar placement="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenCreateAlbum(true)}>
@@ -105,44 +118,134 @@ function RouteComponent() {
                 </ToolbarGroup>
                 <ToolbarGroup>
                     <ButtonGroup>
-                        <Button variant="outline" size="icon" disabled={selected.length !== 1}>
-                            <IconPencil className="size-5" />
+                        <Button variant="outline" size="icon" disabled={items.length === 0 || settings.libraryZoom === 0} onClick={() => updateSettings({ libraryZoom: settings.libraryZoom - 1 })}>
+                            <IconPlus className="size-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={items.length === 0 || settings.libraryZoom === gridSizes.length - 1} onClick={() => updateSettings({ libraryZoom: settings.libraryZoom + 1 })}>
+                            <IconMinus className="size-5" />
                         </Button>
                     </ButtonGroup>
                     <ButtonGroup>
-                        <Button variant={settings.albumLayout === "card" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "card" })}>
-                            <IconLayoutGrid className="size-5" />
+                        <Button variant="outline" size="icon" disabled={items.length === 0} onClick={() => updateSettings({ libraryExpanded: !settings.libraryExpanded })}>
+                            <IconArrowAutofitHeight className="size-5" />
                         </Button>
-                        <Button variant={settings.albumLayout === "grid" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "grid" })}>
-                            <IconGridDots className="size-5" />
+                        <Button variant="outline" size="icon" disabled={items.length === 0}>
+                            <IconFilter2 className="size-5" />
                         </Button>
-                        <Button variant={settings.albumLayout === "list" ? "default" : "outline"} size="icon" onClick={() => updateSettings({ albumLayout: "list" })}>
-                            <IconListDetails className="size-5" />
+                    </ButtonGroup>
+                    <ButtonGroup>
+                        <Button variant="outline" size="icon" disabled={selectedAlbums.length !== 1}>
+                            <IconPencil className="size-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={selectedAlbums.length === 0}>
+                            <IconShare2 className="size-5" />
                         </Button>
                     </ButtonGroup>
                 </ToolbarGroup>
             </Toolbar>
-            <div className={gridStyles({ layout: settings.albumLayout, grid: isPending || albums.length > 0 })}>
-                {isPending && <GridLoading />}
-                {albums.length > 0 ? albums.map((p, i) => (
-                    <AlbumContextMenu
-                        key={p.id}
-                        selected={selected}
-                        onEdit={() => {}}
-                        onDelete={() => {}}
-                    >
-                        <GridItem
-                            item={p}
-                            selected={!!selected.find(s => s.id === p.id)}
-                            viewmode={settings.albumLayout}
-                            onClick={e => handleSelect(e, i, p)}
-                            onDoubleClick={() => onNavigate(p)}
-                            onContextMenu={() => handleRightClick(i, p)}
+            <div className="flex flex-col flex-1">
+                {items.length > 0 && (
+                    <motion.div className="w-full h-68 absolute top-0 left-0 mask-b-from-60% z-0" style={{ y: bannerY }}>
+                        {currentAlbum?.selected_banner === 1 && currentAlbum?.banner_photo ? (
+                            <img src={getThumbPath(currentAlbum.banner_photo, selectedLibrary?.path)} className="size-full object-cover" />
+                        ) : (
+                            <img src={getThumbPath(items[2].id, selectedLibrary?.path)} className="size-full object-cover" />
+                        )}
+                    </motion.div>
+                )}
+                {currentAlbum && (
+                    <div className={cn("p-4 flex flex-col justify-end z-1", items.length > 0 ? "h-44" : "h-18")}>
+                        <h1 className="text-4xl font-bold drop-shadow-md">{currentAlbum.name}</h1>
+                        {currentAlbum.description && (
+                            <p className="text-muted-foreground mb-2">{currentAlbum.description}</p>
+                        )}
+                    </div>
+                )}
+                {items.length === 0 ? (
+                    <div className={cn("z-1", albums.length > 0 ? "px-4 pt-1 pb-4 grid gap-4 grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" : "flex flex-col flex-1 absolute inset-0")}>
+                        {isPendingA ? (
+                            <GridLoading />
+                        ) : albums.length > 0 ? (
+                            albums.map((album, i) => (
+                                <AlbumItem
+                                    album={album}
+                                    index={i}
+                                    selectedAlbums={selectedAlbums}
+                                    handleSelect={handleSelectAlbum}
+                                    handleRightClick={handleRightClickAlbum}
+                                    handleNavigate={onNavigate}
+                                    key={album.id}
+                                />
+                            ))
+                        ) : (
+                            <GridEmpty id={id} onAdd={() => setOpenCreateAlbum(true)} onLibrary={() => navigate({ to: "/" })} />
+                        )}
+                    </div>
+                ) : (albums.length > 0 && (
+                    <div className="p-4 flex gap-4 overflow-x-auto z-1 scroll-hidden">
+                        {albums.map((album, i) => (
+                            <div key={album.id}>
+                                <AlbumItem
+                                    album={album}
+                                    index={i}
+                                    size="sm"
+                                    selectedAlbums={selectedAlbums}
+                                    handleSelect={handleSelectAlbum}
+                                    handleRightClick={handleRightClickAlbum}
+                                    handleNavigate={onNavigate}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ))}
+                {items.length > 0 && (
+                    <div className="px-2 flex-1 min-h-0 z-1">
+                        <ItemGrid
+                            items={items}
+                            isPending={isPendingI}
+                            parent={gridParent}
+                            isAlbum={true}
+                            selected={selectedItems}
+                            setSelected={setSelectedItems}
+                            viewingItem={undefined}
+                            setViewingItem={() => {}}
+                            handleSelect={handleSelectItem}
+                            handleRightClick={handleRightClickItem}
+                            empty={<></>}
                         />
-                    </AlbumContextMenu>
-                )) : <GridEmpty id={id} onAdd={() => setOpenCreateAlbum(true)} />}
+                    </div>
+                )}
             </div>
         </div>
+    );
+}
+
+interface AlbumItemProps {
+    album: AlbumComp;
+    index: number;
+    size?: "md" | "sm";
+    selectedAlbums: AlbumComp[];
+    handleSelect: (event: React.MouseEvent, index: number, item: AlbumComp) => unknown;
+    handleRightClick: (index: number, item: AlbumComp) => unknown;
+    handleNavigate: (album: AlbumComp) => unknown;
+}
+
+function AlbumItem({ album, index, size, selectedAlbums, handleSelect, handleRightClick, handleNavigate }: AlbumItemProps) {
+    return (
+        <AlbumContextMenu
+            selected={selectedAlbums}
+            onEdit={() => {}}
+            onDelete={() => {}}
+        >
+            <AlbumCard
+                album={album}
+                selected={!!selectedAlbums.find(s => s.id === album.id)}
+                size={size}
+                onClick={e => handleSelect(e, index, album)}
+                onDoubleClick={() => handleNavigate(album)}
+                onContextMenu={() => handleRightClick(index, album)}
+            />
+        </AlbumContextMenu>
     );
 }
 
@@ -152,7 +255,7 @@ function GridLoading() {
     ));
 }
 
-function GridEmpty({ id, onAdd }: { id?: string; onAdd: () => unknown }) {
+function GridEmpty({ id, onAdd, onLibrary }: { id?: string; onAdd: () => unknown; onLibrary: () => unknown }) {
     return !id ? (
         <CenterLayout>
             <IconBox className="mb-4">
@@ -171,78 +274,10 @@ function GridEmpty({ id, onAdd }: { id?: string; onAdd: () => unknown }) {
             </IconBox>
             <animate.h1 className="text-xl font-bold" delay={0.15}>Empty album</animate.h1>
             <animate.p className="text-muted-foreground" delay={0.3}>This album does not have any photos or videos, time to fill it with memories!</animate.p>
+            <animate.div className="w-full mt-2 flex justify-center gap-4" delay={0.45}>
+                <Button onClick={onLibrary}>Go to library</Button>
+                <Button variant="outline" onClick={onAdd}>Create album</Button>
+            </animate.div>
         </CenterLayout>
-    );
-}
-
-interface GridItemProps {
-    item: Album;
-    selected: boolean;
-    viewmode: Settings["albumLayout"];
-    onClick?: React.MouseEventHandler<HTMLElement>;
-    onDoubleClick?: React.MouseEventHandler<HTMLElement>;
-    onContextMenu?: React.MouseEventHandler<HTMLElement>;
-}
-
-const gridItemStyles = cva(
-    "flex overflow-hidden transition-shadow",
-    {
-        variants: {
-            layout: {
-                card: "flex-col rounded-lg",
-                grid: "px-4 pt-5 pb-3 flex-col items-center gap-4 rounded-lg",
-                list: "p-3 items-center gap-4 rounded-[18px]",
-            },
-            selected: {
-                true: "ring-2 ring-primary",
-                false: "ring ring-border",
-            },
-        },
-        defaultVariants: {
-            layout: "card",
-            selected: false,
-        },
-    },
-);
-
-function GridItem({ item, selected, viewmode, onClick, onDoubleClick, onContextMenu }: GridItemProps) {
-    return (
-        <div className={gridItemStyles({ layout: viewmode, selected })} onClick={onClick} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
-            {viewmode === "card" ? (
-                <>
-                    <div className="grid grid-cols-5 grid-rows-2 grid-flow-col aspect-5/2">
-                        <div className="w-full bg-muted aspect-square"></div>
-                        <div className="w-full bg-muted/90 aspect-square"></div>
-                        <div className="w-full bg-muted/80 aspect-square"></div>
-                        <div className="w-full bg-muted/70 aspect-square"></div>
-                        <div className="w-full bg-muted/60 aspect-square"></div>
-                        <div className="w-full bg-muted/50 aspect-square"></div>
-                        <div className="w-full bg-muted/40 aspect-square"></div>
-                        <div className="w-full bg-muted/30 aspect-square"></div>
-                        <div className="w-full bg-muted/20 aspect-square"></div>
-                        <div className="w-full bg-muted/10 aspect-square"></div>
-                    </div>
-                    <div className="pl-4 pb-5 flex items-center relative">
-                        <div className="p-0.5 absolute bg-background rounded-xl z-1">
-                            <AlbumCover item={item} size="xl" />
-                        </div>
-                    </div>
-                    <div className="px-4.5 py-4">
-                        <h3 className="text-lg font-semibold">{item.name}</h3>
-                        {item.description}
-                    </div>
-                </>
-            ) : viewmode === "grid" ? (
-                <>
-                    <AlbumCover item={item} size="xl" />
-                    <h3 className="text-lg font-semibold">{item.name}</h3>
-                </>
-            ) : (
-                <>
-                    <AlbumCover item={item} />
-                    <h3 className="text-lg font-semibold">{item.name}</h3>
-                </>
-            )}
-        </div>
     );
 }

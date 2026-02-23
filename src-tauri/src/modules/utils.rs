@@ -64,46 +64,57 @@ pub fn load_image(data: &Vec<u8>, ext: &str) -> Result<image::DynamicImage, Stri
 
 pub fn deserialize_item(row: &Row<'_>) -> Result<modules::Item, rusqlite::Error> {
     Ok(modules::Item {
-        id: row.get(0)?,
-        original_name: row.get(1)?,
-        file_ext: row.get(2)?,
-        file_type: row.get(3)?,
-        file_size: row.get(4)?,
-        width: row.get(5)?,
-        height: row.get(6)?,
-        duration: row.get(7)?,
-        checksum: row.get(8)?,
-        is_favorite: row.get::<_, i32>(9)? != 0,
-        is_screenshot: row.get::<_, i32>(10)? != 0,
-        is_screen_recording: row.get::<_, i32>(11)? != 0,
-        live_video: row.get::<_, Option<String>>(12)?,
-        raw_original_name: row.get::<_, Option<String>>(13)?,
-        raw_file_size: row.get::<_, Option<u64>>(14)?,
-        raw_checksum: row.get::<_, Option<String>>(15)?,
-        raw_live_video: row.get::<_, Option<String>>(16)?,
-        has_adjustments: row.get::<_, i32>(17)? != 0,
-        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(18)?).unwrap().with_timezone(&Utc),
+        id: row.get("id")?,
+        original_name: row.get("original_name")?,
+        file_ext: row.get("file_ext")?,
+        file_type: row.get("file_type")?,
+        file_size: row.get("file_size")?,
+        width: row.get("width")?,
+        height: row.get("height")?,
+        duration: row.get("duration")?,
+        checksum: row.get("checksum")?,
+        taken_date: DateTime::parse_from_rfc3339(&row.get::<_, String>("taken_date")?).map(|d| d.with_timezone(&Utc)).unwrap_or(Utc::now()),
+        is_favorite: row.get::<_, i32>("is_favorite")? != 0,
+        is_screenshot: row.get::<_, i32>("is_screenshot")? != 0,
+        is_screen_recording: row.get::<_, i32>("is_screen_recording")? != 0,
+        live_video: row.get::<_, Option<String>>("live_video")?,
+        raw_original_name: row.get::<_, Option<String>>("raw_original_name")?,
+        raw_file_size: row.get::<_, Option<u64>>("raw_file_size")?,
+        raw_checksum: row.get::<_, Option<String>>("raw_checksum")?,
+        raw_live_video: row.get::<_, Option<String>>("raw_live_video")?,
+        has_adjustments: row.get::<_, i32>("has_adjustments")? != 0,
+        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>("created_at")?).map(|d| d.with_timezone(&Utc)).unwrap_or(Utc::now()),
     })
 }
 
 pub fn deserialize_item_album_ref(row: &Row<'_>) -> Result<modules::ItemAlbumRef, rusqlite::Error> {
     Ok(modules::ItemAlbumRef {
         item: deserialize_item(row)?,
-        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(19)?).unwrap().with_timezone(&Utc),
+        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>("added_at")?).unwrap().with_timezone(&Utc),
     })
 }
 
 pub fn deserialize_album(row: &Row<'_>) -> Result<modules::Album, rusqlite::Error> {
     Ok(modules::Album {
-        id: row.get(0)?,
-        name: row.get(1)?,
-        description: row.get(2)?,
-        parent: row.get(3)?,
-        selected_cover: row.get(4)?,
-        icon: row.get(5)?,
-        color: row.get(6)?,
-        cover_photo: row.get(7)?,
-        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?).unwrap().with_timezone(&Utc),
+        id: row.get("id")?,
+        name: row.get("name")?,
+        description: row.get("description")?,
+        parent: row.get("parent")?,
+        selected_cover: row.get("selected_cover")?,
+        selected_banner: row.get("selected_banner")?,
+        icon: row.get("icon")?,
+        color: row.get("color")?,
+        cover_photo: row.get("cover_photo")?,
+        banner_photo: row.get("banner_photo")?,
+        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>("created_at")?).unwrap().with_timezone(&Utc),
+    })
+}
+
+pub fn deserialize_album_computed(row: &Row<'_>) -> Result<modules::AlbumComp, rusqlite::Error> {
+    Ok(modules::AlbumComp {
+        album: deserialize_album(row)?,
+        size: row.get("size")?,
+        peek_thumbs: serde_json::from_str(&row.get::<_, String>("peek_thumbs")?).unwrap_or(vec![]),
     })
 }
 
@@ -120,15 +131,13 @@ pub fn generate_video_thumbnail(app: &AppHandle, input: &Path, output: &Path) ->
     let input_str = input.to_string_lossy().to_string();
     let output_str = output.to_string_lossy().to_string();
 
-    let sidecar_command = app.shell()
-        .command("ffmpeg")
-        .args([
-            "-y",
-            "-i", &input_str,
-            "-vf", "thumbnail,scale=512:512:force_original_aspect_ratio=decrease",
-            "-frames:v", "1",
-            &output_str
-        ]);
+    let sidecar_command = app.shell().command("ffmpeg").args([
+        "-y",
+        "-i", &input_str,
+        "-vf", "thumbnail,scale=512:512:force_original_aspect_ratio=decrease",
+        "-frames:v", "1",
+        &output_str,
+    ]);
 
     let output = tauri::async_runtime::block_on(async move {
         sidecar_command.output().await
@@ -144,15 +153,13 @@ pub fn generate_video_thumbnail(app: &AppHandle, input: &Path, output: &Path) ->
 pub fn get_video_metadata(app: &AppHandle, path: &Path) -> Result<(u32, u32, u64), String> {
     let path_str = path.to_string_lossy().to_string();
 
-    let sidecar_command = app.shell()
-        .command("ffprobe")
-        .args([
-            "-v", "error",
-            "-select_streams", "v:0",
-            "-show_entries", "stream=width,height,duration",
-            "-of", "csv=s=x:p=0",
-            &path_str
-        ]);
+    let sidecar_command = app.shell().command("ffprobe").args([
+        "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=width,height,duration",
+        "-of", "csv=s=x:p=0",
+        &path_str,
+    ]);
 
     let output = tauri::async_runtime::block_on(async move {
         sidecar_command.output().await

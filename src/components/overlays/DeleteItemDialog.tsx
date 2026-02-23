@@ -16,10 +16,10 @@ export function DeleteItemDialog({ open, onOpenChange, items, onConfirm }: Delet
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="w-110">
+            <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete items</DialogTitle>
-                    <DialogDescription>Are you sure you want to delete {items.length == 1 ? "this item" : `${items.length} items`}? You cannot recover them after deletion!</DialogDescription>
+                    <DialogTitle>Delete {items.length === 1 ? "item" : "items"}</DialogTitle>
+                    <DialogDescription>Are you sure you want to delete {items.length === 1 ? "this item" : `${items.length} items`}? {items.length === 1 ? "It" : "They"} will be removed from your library entirely and removed from all albums.<br />You <span className="text-secondary-foreground font-bold">cannot</span> recover {items.length === 1 ? "it" : "them"} after deletion!</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>No</Button>

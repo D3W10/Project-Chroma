@@ -11,7 +11,6 @@ import { ItemGrid } from "@/components/custom/ItemGrid";
 import { PhotoViewer } from "@/components/custom/PhotoViewer";
 import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { ImportItemsDialog } from "@/components/overlays/ImportItemsDialog";
-import { DeleteItemDialog } from "@/components/overlays/DeleteItemDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
 import { getItems } from "@/lib/invoker";
 import { gridSizes, type Item } from "@/lib/models";
@@ -19,7 +18,7 @@ import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
-import { cn } from "@/lib/utils";
+import { cn, treatDataRefresh } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({
     component: RouteComponent,
@@ -30,7 +29,6 @@ function RouteComponent() {
     const [viewingItem, setViewingItem] = useState<Item>();
     const [openAddItems, setOpenAddItems] = useState(false);
     const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
-    const [deleteItemDialog, setDeleteItemDialog] = useState(false);
     const gridParent = useRef<HTMLDivElement>(null);
     const action = useAction();
     const { selectedLibrary } = useLibrary();
@@ -42,24 +40,8 @@ function RouteComponent() {
         queryFn: () => getItems({ libraryId: selectedLibrary?.id ?? "" }),
     });
 
-    async function handleDelete() {
-        await action.deleteItems(selected.map(p => p.id));
-        setSelected([]);
-    }
-
     useEffect(() => {
-        const allItems = data?.data ?? [];
-        const newSelected: Item[] = [];
-
-        setItems(allItems);
-
-        selected.forEach(s => {
-            const newPic = allItems.find(p => p.id === s.id);
-            if (newPic)
-                newSelected.push(newPic);
-        });
-
-        setSelected(newSelected);
+        treatDataRefresh(data?.data, setItems, selected, setSelected);
     }, [data]);
 
     return (
@@ -72,7 +54,6 @@ function RouteComponent() {
                     </Button>
                     <ImportItemsDialog openDialog={openAddItems} onOpenChange={setOpenAddItems} />
                     <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum(selected.map(p => p.id), a)} />
-                    <DeleteItemDialog open={deleteItemDialog} onOpenChange={setDeleteItemDialog} items={selected} onConfirm={handleDelete} />
                 </ToolbarGroup>
                 <ToolbarGroup>
                     <ButtonGroup>
@@ -107,14 +88,13 @@ function RouteComponent() {
             <ItemGrid
                 items={items}
                 isPending={isPending}
-                selected={selected}
                 parent={gridParent}
+                selected={selected}
+                setSelected={setSelected}
                 viewingItem={viewingItem}
                 setViewingItem={setViewingItem}
                 handleSelect={handleSelect}
                 handleRightClick={handleRightClick}
-                onAddToAlbum={() => setAddToAlbumDialog(true)}
-                onDelete={() => setDeleteItemDialog(true)}
                 empty={<GridEmpty onAdd={() => setOpenAddItems(true)} />}
             />
             <PhotoViewer item={viewingItem} setItem={setViewingItem} />

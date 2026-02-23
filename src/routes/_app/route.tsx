@@ -77,7 +77,7 @@ function RouteComponent() {
     return (
         <div className="min-h-0 flex justify-center items-center flex-1">
             <Sidebar collapsed={!successLoaded} />
-            <div className={cn("h-full flex flex-col flex-1 bg-background ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200", successLoaded ? "rounded-tl-xl" : "")}>
+            <div className={cn("h-full flex flex-col flex-1 bg-background ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200 *:overscroll-none", successLoaded ? "rounded-tl-xl" : "")}>
                 {successLoaded && selectedLibrary ? (
                     <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
@@ -106,7 +106,7 @@ function RouteComponent() {
                             <animate.h1 className="text-xl font-bold" delay={0.15}>Library outdated</animate.h1>
                             <animate.div className="text-muted-foreground space-y-2" delay={0.3}>
                                 <p>This library has been created using an older version of Project Chroma, you need to upgrade it first before using it.</p>
-                                <p> Note that older versions of the app will not be able to open this library again!</p>
+                                <p>Note that older versions of the app will not be able to open this library again!</p>
                             </animate.div>
                             <animate.div className="w-full mt-2 flex justify-center gap-4" delay={0.45}>
                                 <Button disabled={migrating} onClick={handleUpgradeLibrary}>

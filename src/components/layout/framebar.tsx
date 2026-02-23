@@ -81,9 +81,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                             <Popover open={isLibraryPanelOpen} onOpenChange={setIsLibraryPanelOpen}>
                                 <PopoverTrigger asChild>
                                     <Button variant="ghost" className="w-54 h-full min-w-0 px-2 py-1.5 flex items-center gap-2 group" role="combobox" aria-expanded={isLibraryPanelOpen}>
-                                        <IconColor color={selectedLibrary ? selectedLibrary.color : "var(--color-slate-500)"}>
-                                            {selectedLibrary ? selectedLibrary.icon : "📁"}
-                                        </IconColor>
+                                        <IconColor color={selectedLibrary?.color}>{selectedLibrary?.icon}</IconColor>
                                         <span className={cn("flex-1 group-hover:text-foreground text-left truncate transition-colors", !isLibraryPanelOpen ? "text-secondary-foreground" : "text-foreground")}>{selectedLibrary ? selectedLibrary.name : "Select library..."}</span>
                                         <IconSelector className="text-muted-foreground" />
                                     </Button>

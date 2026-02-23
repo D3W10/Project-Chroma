@@ -1,31 +1,21 @@
-use chrono::Utc;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use image::GenericImageView;
 use rayon::prelude::*;
-use rusqlite::{params, Connection};
+use rusqlite::Connection;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::io::Cursor;
-use std::sync::{atomic, Arc};
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, atomic};
 use tauri::{AppHandle, Emitter, async_runtime::spawn_blocking};
 use uuid::Uuid;
 
 use crate::modules;
 use crate::modules::config;
-use crate::modules::utils;
+use crate::modules::db;
 use crate::modules::migrations;
-
-fn open_db_from_path(db_path: &Path) -> Result<Connection, String> {
-    if !db_path.exists() {
-        log::error!("Database not found at {:?}", db_path);
-        return Err("notfound".to_string());
-    }
-
-    let conn = Connection::open(db_path).map_err(|e| utils::treat(e, "Unable to open database"))?;
-    conn.execute("PRAGMA foreign_keys = ON", []).map_err(|e| utils::treat(e, "Unable to open database"))?;
-    Ok(conn)
-}
+use crate::modules::utils;
 
 fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, String> {
     let meta_path = get_library_root_path(app, library_id)?;
@@ -35,7 +25,7 @@ fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, St
     }
 
     let db_path = meta_path.join("lib.db");
-    open_db_from_path(&db_path)
+    db::open_connection(&db_path)
 }
 
 fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, String> {
@@ -57,15 +47,15 @@ fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, S
 
 #[tauri::command]
 pub fn check_library_health(app: AppHandle, library_id: String, upgrade: Option<bool>) -> Result<bool, String> {
-    let mut library_conn = get_db_connection(&app, &library_id)?;
+    let mut conn = get_db_connection(&app, &library_id)?;
 
-    let version = library_conn.query_one("PRAGMA user_version", [], |row| row.get::<usize, u32>(0)).map_err(|e| utils::treat(e, "Unable to check library version"))?;
+    let version = db::fetch_library_version(&conn)?;
     let latest = migrations::get_latest_version();
 
     if version < latest {
         log::error!("Library {}", upgrade.unwrap_or(false));
         if upgrade.unwrap_or(false) {
-            migrations::migrate_to_latest(version, &mut library_conn).map(|_| true)
+            migrations::migrate_to_latest(version, &mut conn).map(|_| true)
         } else {
             Err("outdated".to_string())
         }
@@ -89,82 +79,10 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
 
     fs::create_dir_all(&full_path).map_err(|e| utils::treat(e, "Unable to create library at the specified path"))?;
 
-    let conn = Connection::open(full_path.join("lib.db").to_str().unwrap());
-
-    match conn {
-        Ok(conn) => {
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS library (
-                    name TEXT NOT NULL,
-                    icon TEXT NOT NULL,
-                    color TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS item (
-                    id TEXT PRIMARY KEY,
-                    original_name TEXT NOT NULL,
-                    file_ext TEXT NOT NULL,
-                    file_type TEXT NOT NULL,
-                    file_size INTEGER NOT NULL,
-                    width INTEGER NOT NULL,
-                    height INTEGER NOT NULL,
-                    duration INTEGER NOT NULL,
-                    checksum TEXT NOT NULL,
-                    is_favorite INTEGER DEFAULT 0,
-                    is_screenshot INTEGER DEFAULT 0,
-                    is_screen_recording INTEGER DEFAULT 0,
-                    live_video TEXT,
-                    raw_original_name TEXT,
-                    raw_file_size INTEGER,
-                    raw_checksum TEXT,
-                    raw_live_video TEXT,
-                    has_adjustments INTEGER DEFAULT 0,
-                    created_at TEXT NOT NULL
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album (
-                    id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    description TEXT NOT NULL,
-                    parent TEXT,
-                    selected_cover INTEGER NOT NULL,
-                    icon TEXT,
-                    color TEXT,
-                    cover_photo TEXT,
-                    created_at TEXT NOT NULL,
-                    FOREIGN KEY (parent) REFERENCES album (id) ON DELETE CASCADE
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "CREATE TABLE IF NOT EXISTS album_item (
-                    album_id TEXT NOT NULL,
-                    item_id TEXT NOT NULL,
-                    created_at TEXT NOT NULL,
-                    PRIMARY KEY (album_id, item_id),
-                    FOREIGN KEY (album_id) REFERENCES album (id) ON DELETE CASCADE,
-                    FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
-                )",
-                [],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            conn.execute(
-                "INSERT INTO library (name, icon, color, created_at) VALUES (?1, ?2, ?3, ?4)",
-                params![name, icon, color, Utc::now().to_rfc3339()],
-            ).map_err(|e| utils::treat(e, "Error creating library"))?;
-
-            migrations::label_latest(conn)?;
-        }
-        Err(e) => return Err(e.to_string()),
-    }
+    let conn = db::create_connection(&full_path.join("lib.db"))?;
+    db::create_library_schema(&conn)?;
+    db::insert_library_metadata(&conn, name, icon, color)?;
+    migrations::label_latest(conn)?;
 
     let mut libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr.clone(),
@@ -187,31 +105,14 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
 
 #[tauri::command]
 pub fn get_library_info_from_path(path: &str) -> Result<Value, String> {
-    let db_path = Path::new(path).join("lib.db");
-    let conn = open_db_from_path(&db_path)?;
-
-    let mut stmt = conn.prepare("SELECT name, icon, color FROM library LIMIT 1").map_err(|e| utils::treat(e, "Unable to fetch library metadata"))?;
-    let mut library_info = stmt.query_row([], |row| {
-        Ok(serde_json::json!({
-            "name": row.get::<_, String>(0)?,
-            "icon": row.get::<_, String>(1)?,
-            "color": row.get::<_, String>(2)?,
-        }))
-    }).map_err(|e| utils::treat(e, "Unable to fetch library metadata"))?;
-
-    let count: i64 = conn.query_row("SELECT COUNT(*) FROM item", [], |row| row.get(0)).map_err(|e| utils::treat(e, "Unable to fetch item count"))?;
-
-    if let Some(obj) = library_info.as_object_mut() {
-        obj.insert("count".to_string(), serde_json::Value::Number(count.into()));
-    }
-
-    Ok(library_info)
+    let conn = db::open_connection(&Path::new(path).join("lib.db"))?;
+    db::fetch_library_info(&conn)
 }
 
 #[tauri::command]
 pub fn add_library(app: AppHandle, path: String) -> Result<Value, String> {
     let info = get_library_info_from_path(&path)?;
-    
+
     let library_id = Uuid::new_v4().to_string();
     let name = info.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown");
     let icon = info.get("icon").and_then(|v| v.as_str()).unwrap_or("");
@@ -240,23 +141,21 @@ pub fn add_library(app: AppHandle, path: String) -> Result<Value, String> {
 
 #[tauri::command]
 pub fn get_items(app: AppHandle, library_id: String) -> Result<Vec<modules::Item>, String> {
-    let conn = get_db_connection(&app, &library_id)?;
-    let mut stmt = conn.prepare("SELECT * FROM item ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain items"))?;
-
-    let item_iter = stmt.query_map([], |row| utils::deserialize_item(row)).map_err(|e| utils::treat(e, "Unable to obtain items"))?;
-
-    let mut items = Vec::new();
-    for item in item_iter {
-        items.push(item.map_err(|e| utils::treat(e, "Unable to obtain items"))?);
-    }
-
-    Ok(items)
+    db::fetch_items(&get_db_connection(&app, &library_id)?)
 }
 
 #[tauri::command]
 pub async fn verify_conflicts(source_paths: Vec<String>, check_live_photos: bool, parse_edits: bool) -> Result<modules::ImportCandidate, String> {
     let mut groups: HashMap<String, modules::Group> = HashMap::new();
-    let empty_group = || -> modules::Group { modules::Group { original_items: vec![], edited_items: vec![], original_videos: vec![], edited_videos: vec![], adjustments: None } };
+    let empty_group = || -> modules::Group {
+        modules::Group {
+            original_items: vec![],
+            edited_items: vec![],
+            original_videos: vec![],
+            edited_videos: vec![],
+            adjustments: None,
+        }
+    };
     let unedited_name = |name: &str| -> String { format!("IMG_{}", &name[5..]) };
 
     for path_str in &source_paths {
@@ -382,61 +281,11 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<modules::I
     }).await.map_err(|e| utils::treat(e, "Task join error"))?;
 
     let processed_items = results.map_err(|e| utils::treat(e, "Unable to prepare items"))?;
+    let conn = get_db_connection(&app, &library_id)?;
 
-    let mut conn = get_db_connection(&app, &library_id)?;
-    let tx = conn.transaction().map_err(|e| utils::treat(e, "Unable to begin transaction"))?;
-
-    {
-        let mut stmt = tx.prepare(
-            "INSERT INTO item (
-                id,
-                original_name,
-                file_ext,
-                file_type,
-                file_size,
-                width,
-                height,
-                duration,
-                checksum,
-                is_favorite,
-                is_screenshot,
-                is_screen_recording,
-                live_video,
-                raw_original_name,
-                raw_file_size,
-                raw_checksum,
-                raw_live_video,
-                has_adjustments,
-                created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)"
-        ).map_err(|e| utils::treat(e, "Unable to prepare statement"))?;
-
-        for item in &processed_items {
-            stmt.execute(params![
-                item.id,
-                item.original_name,
-                item.file_ext,
-                item.file_type,
-                item.file_size,
-                item.width,
-                item.height,
-                item.duration,
-                item.checksum,
-                item.is_favorite as i32,
-                item.is_screenshot as i32,
-                item.is_screen_recording as i32,
-                item.live_video,
-                item.raw_original_name,
-                item.raw_file_size,
-                item.raw_checksum,
-                item.raw_live_video,
-                item.has_adjustments as i32,
-                item.created_at.to_rfc3339()
-            ]).map_err(|e| utils::treat(e, "Unable to import item to the library"))?;
-        }
+    for item in &processed_items {
+        db::insert_item(&conn, item)?;
     }
-
-    tx.commit().map_err(|e| utils::treat(e, "Unable to commit transaction"))?;
 
     Ok(processed_items)
 }
@@ -464,13 +313,25 @@ fn prepare_item(app: &AppHandle, import_item: &modules::ImportItem, originals_di
     let width;
     let height;
     let mut duration = 0;
+    let mut taken_date = fs::metadata(source_path)
+        .ok()
+        .and_then(|metadata| metadata.created().or_else(|_| metadata.modified()).ok())
+        .map(DateTime::<Utc>::from)
+        .unwrap_or_else(Utc::now);
 
     if !utils::map_extension_to_mime(file_extension).starts_with("video/") {
         let mut image = utils::load_image(&file_data, file_extension)?;
 
-        if ["jpg", "jpeg"].contains(&file_extension.to_lowercase().as_str()) {
+        if ["jpg", "jpeg", "heic", "heif"].contains(&file_extension.to_lowercase().as_str()) {
             if let Ok(reader) = exif::Reader::new().read_from_container(&mut Cursor::new(&file_data)) {
-                if let Some(orientation_field) = reader.get_field(exif::Tag::Orientation, exif::In::PRIMARY) {
+                if let Some(date_field) = reader.get_field(exif::Tag::DateTimeOriginal, exif::In::PRIMARY) {
+                    let date_str = date_field.display_value().to_string();
+                    if let Ok(parsed_date) = NaiveDateTime::parse_from_str(&date_str, "%Y-%m-%d %H:%M:%S") {
+                        taken_date = DateTime::from_naive_utc_and_offset(parsed_date, Utc);
+                    }
+                }
+
+                if ["jpg", "jpeg"].contains(&file_extension.to_lowercase().as_str()) && let Some(orientation_field) = reader.get_field(exif::Tag::Orientation, exif::In::PRIMARY) {
                     let orientation = orientation_field.value.get_uint(0).unwrap_or(1);
 
                     image = match orientation {
@@ -490,7 +351,7 @@ fn prepare_item(app: &AppHandle, import_item: &modules::ImportItem, originals_di
         let (w, h) = image.dimensions();
         width = w;
         height = h;
-        
+
         let thumb_path = thumbs_dir.join(format!("{}.webp", item_id));
         utils::generate_image_thumbnail(&image, &thumb_path)?;
     } else {
@@ -584,6 +445,7 @@ fn prepare_item(app: &AppHandle, import_item: &modules::ImportItem, originals_di
         height,
         duration,
         checksum,
+        taken_date,
         is_favorite: false,
         is_screenshot: false,
         is_screen_recording: false,
@@ -593,7 +455,7 @@ fn prepare_item(app: &AppHandle, import_item: &modules::ImportItem, originals_di
         raw_checksum,
         raw_live_video: original_live_video_name,
         has_adjustments: import_item.adjustments_path.is_some(),
-        created_at: Utc::now()
+        created_at: Utc::now(),
     })
 }
 
@@ -603,43 +465,182 @@ pub fn set_items_favorite(app: AppHandle, library_id: String, item_ids: Vec<Stri
         return Ok(());
     }
 
-    let mut conn = get_db_connection(&app, &library_id)?;
-    let tx = conn.transaction().map_err(|e| utils::treat(e, "Unable to begin transaction"))?;
-    for item_id in &item_ids {
-        tx.execute(
-            "UPDATE item SET is_favorite = ?1 WHERE id = ?2",
-            params![
-                if value { 1 } else { 0 },
-                item_id
-            ],
-        ).map_err(|e| utils::treat(e, "Unable to update the item favorite state"))?;
+    db::set_items_favorite(&get_db_connection(&app, &library_id)?, &item_ids, value)
+}
+
+#[tauri::command]
+pub fn transfer_items(app: AppHandle, source_id: String, target_id: String, item_ids: Vec<String>, do_move: Option<bool>) -> Result<(), String> {
+    if item_ids.is_empty() {
+        return Ok(());
     }
-    tx.commit().map_err(|e| utils::treat(e, "Unable to save favorite items"))?;
+
+    if source_id == target_id {
+        return Err("same_library".to_string());
+    }
+
+    let do_move = do_move.unwrap_or(false);
+
+    let source_root = get_library_root_path(&app, &source_id)?;
+    let target_root = get_library_root_path(&app, &target_id)?;
+
+    let conn_src = get_db_connection(&app, &source_id)?;
+    let conn_tgt = get_db_connection(&app, &target_id)?;
+
+    for id in &item_ids {
+        let item = db::fetch_item(&conn_src, id)?;
+
+        transfer_items_over(&source_root, &target_root, &item, do_move)?;
+        db::insert_item(&conn_tgt, &item)?;
+
+        if do_move {
+            db::delete_item(&conn_src, id)?;
+        }
+    }
+
     Ok(())
 }
 
-fn generate_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), String> {
-    let thumb = img.thumbnail(512, 512);
+fn transfer_items_over(source_root: &Path, target_root: &Path, item: &modules::Item, remove_source: bool) -> Result<(), String> {
+    let source_originals = source_root.join("originals");
+    let target_originals = target_root.join("originals");
+    let source_thumbnails = source_root.join("thumbnails");
+    let target_thumbnails = target_root.join("thumbnails");
+    let source_adjustments = source_root.join("adjustments");
+    let target_adjustments = target_root.join("adjustments");
 
-    let mut out_file = fs::File::create(output_path).map_err(|e| utils::treat(e, "Unable to generate thumbnail"))?;
-    thumb.write_to(&mut out_file, ImageFormat::WebP).map_err(|e| utils::treat(e, "Unable to write thumbnail"))?;
+    transfer_file(
+        &source_originals.join(format!("{}.{}", item.id, item.file_ext)),
+        &target_originals.join(format!("{}.{}", item.id, item.file_ext)),
+        remove_source,
+    )?;
+
+    if let Some(raw_original_name) = &item.raw_original_name {
+        let raw_ext = Path::new(raw_original_name).extension().and_then(|ext| ext.to_str()).unwrap_or("");
+        let raw_file_name = format!("{}-orig.{}", item.id, raw_ext);
+
+        transfer_file(
+            &source_originals.join(&raw_file_name),
+            &target_originals.join(&raw_file_name),
+            remove_source,
+        )?;
+    }
+
+    if let Some(live_video) = &item.live_video {
+        transfer_file(
+            &source_originals.join(live_video),
+            &target_originals.join(live_video),
+            remove_source,
+        )?;
+    }
+
+    if let Some(raw_live_video) = &item.raw_live_video {
+        transfer_file(
+            &source_originals.join(raw_live_video),
+            &target_originals.join(raw_live_video),
+            remove_source,
+        )?;
+    }
+
+    transfer_file(
+        &source_thumbnails.join(format!("{}.webp", item.id)),
+        &target_thumbnails.join(format!("{}.webp", item.id)),
+        remove_source,
+    )?;
+
+    if item.has_adjustments {
+        transfer_file(
+            &source_adjustments.join(format!("{}.AAE", item.id)),
+            &target_adjustments.join(format!("{}.AAE", item.id)),
+            remove_source,
+        )?;
+    }
+
+    Ok(())
+}
+
+fn transfer_file(source: &Path, target: &Path, remove_source: bool) -> Result<(), String> {
+    if !source.exists() {
+        return Ok(());
+    }
+
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent).map_err(|e| utils::treat(e, "Unable to prepare target directory"))?;
+    }
+
+    if remove_source {
+        match fs::rename(source, target) {
+            Ok(_) => Ok(()),
+            Err(_) => {
+                fs::copy(source, target).map_err(|e| utils::treat(e, "Unable to copy file"))?;
+                fs::remove_file(source).map_err(|e| utils::treat(e, "Unable to remove source file"))?;
+                Ok(())
+            }
+        }
+    } else {
+        fs::copy(source, target).map_err(|e| utils::treat(e, "Unable to copy file"))?;
+        Ok(())
+    }
+}
+
+#[tauri::command]
+pub fn delete_items(app: AppHandle, library_id: String, item_ids: Vec<String>) -> Result<(), String> {
+    let library_root = get_library_root_path(&app, &library_id)?;
+    let conn = get_db_connection(&app, &library_id)?;
+
+    for id in &item_ids {
+        if let Ok(item) = db::fetch_item(&conn, id) {
+            db::delete_item(&conn, id)?;
+
+            let originals_root = library_root.join("originals");
+            let main_original_path = originals_root.join(format!("{}.{}", id, item.file_ext));
+            if main_original_path.exists() {
+                let _ = fs::remove_file(main_original_path);
+            }
+
+            if let Some(lv) = item.live_video {
+                let lv_ext = Path::new(&lv).extension().and_then(|e| e.to_str()).unwrap_or("");
+                let lv_path = originals_root.join(format!("{}.{}", id, lv_ext));
+                if lv_path.exists() {
+                    let _ = fs::remove_file(lv_path);
+                }
+            }
+
+            if let Some(raw_original_name) = item.raw_original_name {
+                let raw_ext = Path::new(&raw_original_name).extension().and_then(|e| e.to_str()).unwrap_or("");
+                let raw_path = originals_root.join(format!("{}-orig.{}", id, raw_ext));
+                if raw_path.exists() {
+                    let _ = fs::remove_file(raw_path);
+                }
+            }
+
+            if let Some(raw_lv) = item.raw_live_video {
+                let raw_ext = Path::new(&raw_lv).extension().and_then(|e| e.to_str()).unwrap_or("");
+                let raw_lv_path = originals_root.join(format!("{}-orig.{}", id, raw_ext));
+                if raw_lv_path.exists() {
+                    let _ = fs::remove_file(raw_lv_path);
+                }
+            }
+
+            if item.has_adjustments {
+                let adjustments_path = library_root.join("adjustments").join(format!("{}.AAE", id));
+                if adjustments_path.exists() {
+                    let _ = fs::remove_file(adjustments_path);
+                }
+            }
+
+            let thumb_path = library_root.join("thumbnails").join(format!("{}.webp", id));
+            if thumb_path.exists() {
+                let _ = fs::remove_file(thumb_path);
+            }
+        }
+    }
 
     Ok(())
 }
 
 #[tauri::command]
-pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<modules::Album>, String> {
-    let conn = get_db_connection(&app, &library_id)?;
-    let mut stmt = conn.prepare("SELECT * FROM album WHERE parent IS ?1 ORDER BY created_at DESC").map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
-
-    let album_iter = stmt.query_map(params![parent], |row| utils::deserialize_album(row)).map_err(|e| utils::treat(e, "Unable to obtain albums"))?;
-
-    let mut albums = Vec::new();
-    for album in album_iter {
-        albums.push(album.map_err(|e| utils::treat(e, "Unable to obtain albums"))?);
-    }
-
-    Ok(albums)
+pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<modules::AlbumComp>, String> {
+    db::fetch_albums(&get_db_connection(&app, &library_id)?, parent)
 }
 
 #[tauri::command]
@@ -654,76 +655,29 @@ pub fn create_album(app: AppHandle, library_id: String, name: String, descriptio
         description: description.clone(),
         parent: parent.clone(),
         selected_cover: 0,
+        selected_banner: 0,
         icon: icon.clone(),
         color: color.clone(),
         cover_photo: None,
+        banner_photo: None,
         created_at: now,
     };
 
-    conn.execute(
-        "INSERT INTO album (id, name, description, parent, selected_cover, icon, color, cover_photo, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![
-            album.id,
-            album.name,
-            album.description,
-            album.parent,
-            album.selected_cover,
-            album.icon,
-            album.color,
-            album.cover_photo,
-            album.created_at.to_rfc3339()
-        ],
-    ).map_err(|e| utils::treat(e, "Insert Error"))?;
-
+    db::insert_album(&conn, &album)?;
     Ok(album)
 }
 
 #[tauri::command]
 pub fn add_items_to_album(app: AppHandle, library_id: String, album_id: String, item_ids: Vec<String>) -> Result<(), String> {
-    let conn = get_db_connection(&app, &library_id)?;
-    let now = Utc::now();
-
-    for item_id in item_ids {
-        conn.execute(
-            "INSERT INTO album_item (album_id, item_id, created_at) VALUES (?1, ?2, ?3)",
-            params![album_id, item_id, now.to_rfc3339()],
-        ).map_err(|e| utils::treat(e, "Unable to insert item into album"))?;
-    }
-
-    Ok(())
+    db::add_items_to_album(&get_db_connection(&app, &library_id)?, &album_id, &item_ids)
 }
 
 #[tauri::command]
 pub fn remove_items_from_album(app: AppHandle, library_id: String, album_id: String, item_ids: Vec<String>) -> Result<(), String> {
-    let conn = get_db_connection(&app, &library_id)?;
-
-    for item_id in item_ids {
-        conn.execute(
-            "DELETE FROM album_item WHERE album_id = ?1 AND item_id = ?2",
-            params![album_id, item_id],
-        ).map_err(|e| utils::treat(e, "Unable to remove item from album"))?;
-    }
-
-    Ok(())
+    db::remove_items_from_album(&get_db_connection(&app, &library_id)?, &album_id, &item_ids)
 }
 
 #[tauri::command]
 pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<modules::ItemAlbumRef>, String> {
-    let conn = get_db_connection(&app, &library_id)?;
-
-    let mut stmt = conn.prepare(
-        "SELECT p.*, ai.created_at as added_at FROM item p 
-        INNER JOIN album_item ai ON p.id = ai.item_id 
-        WHERE ai.album_id = ?1 
-        ORDER BY ai.created_at DESC"
-    ).map_err(|e| utils::treat(e, "Unable to obtain album items"))?;
-
-    let item_iter = stmt.query_map(params![album_id], |row| utils::deserialize_item_album_ref(row)).map_err(|e| utils::treat(e, "Unable to obtain album items"))?;
-
-    let mut items = Vec::new();
-    for item in item_iter {
-        items.push(item.map_err(|e| utils::treat(e, "Unable to obtain album items"))?);
-    }
-
-    Ok(items)
+    db::fetch_album_items(&get_db_connection(&app, &library_id)?, &album_id)
 }

@@ -1,14 +1,15 @@
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { clsx, type ClassValue } from "clsx";
 import { cva as cvaOriginal } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 import { IconAlertTriangle, IconCircleCheck, IconExclamationCircle, IconInfoCircle } from "@tabler/icons-react";
 import { Spinner } from "@/components/ui/spinner";
 import type { Easing } from "motion/react";
-import type { Notification } from "@/lib/models";
+import type { Item, Notification } from "@/lib/models";
 
 type Success<T> = { data: T; error: null };
 type Failure<E> = { data: null; error: E };
-type Result<T, E = string> = Success<T> | Failure<E>;
+export type Result<T, E = string> = Success<T> | Failure<E>;
 
 export const QUICK_EASE: Easing = [0.22, 1, 0.36, 1];
 
@@ -57,3 +58,24 @@ export function isValidColor(color: string) {
 
 export const pathToName = (p: string) => p.split("/").pop() || "";
 export const pathToStem = (p: string) => /([^/\\]+?)(?:\.[^.]*$|$)/g.exec(p)?.[1] || "";
+
+export function treatDataRefresh<T extends { id: string }>(raw: T[] | null | undefined, setData: (data: T[]) => unknown, selected?: T[], setSelected?: (selected: T[]) => void) {
+    const allData = raw ?? [];
+
+    setData(allData);
+
+    if (selected && setSelected) {
+        const newSelected: T[] = [];
+
+        selected.forEach(s => {
+            const newData = allData.find(p => p.id === s.id);
+            if (newData)
+                newSelected.push(newData);
+        });
+
+        setSelected(newSelected);
+    }
+}
+
+export const getThumbPath = (item: string, path: string | undefined) => convertFileSrc(path + "/thumbnails/" + item + ".webp");
+export const getOriginalPath = (item: Item, path: string | undefined) => convertFileSrc(path + "/originals/" + item.id + "." + item.file_ext);
