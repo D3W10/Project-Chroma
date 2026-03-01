@@ -44,7 +44,7 @@ export function AlbumCard({ album, selected, size, onClick, onDoubleClick, onCon
                         <img src={getThumbPath(p, selectedLibrary?.path)} className="w-full aspect-square object-cover" key={i} />
                     ))}
                     {Array(10 - album.peek_thumbs.length).fill(null).map((_, i) => (
-                        <div className="w-full bg-(--color-cell) aspect-square" style={{ "--color-cell": `color-mix(var(--color-background), var(--color-muted) ${100 - ((i + album.peek_thumbs.length) * 10)}%)` } as React.CSSProperties} key={i + album.peek_thumbs.length}></div>
+                        <div className="w-full aspect-square" style={{ backgroundColor: `color-mix(var(--color-background), var(--color-muted) ${100 - ((i + album.peek_thumbs.length) * 10)}%)` }} key={i + album.peek_thumbs.length}></div>
                     ))}
                 </div>
             )}

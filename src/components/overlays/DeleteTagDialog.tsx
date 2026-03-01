@@ -1,14 +1,15 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Tag } from "@/lib/models";
 
-interface DeleteItemDialogProps {
+interface DeleteTagDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => unknown;
-    items: unknown[];
+    tag?: Tag;
     onConfirm: () => unknown;
 }
 
-export function DeleteItemDialog({ open, onOpenChange, items, onConfirm }: DeleteItemDialogProps) {
+export function DeleteTagDialog({ open, onOpenChange, tag, onConfirm }: DeleteTagDialogProps) {
     function confirmAction() {
         onOpenChange(false);
         onConfirm();
@@ -18,8 +19,8 @@ export function DeleteItemDialog({ open, onOpenChange, items, onConfirm }: Delet
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete {items.length === 1 ? "item" : "items"}</DialogTitle>
-                    <DialogDescription>Are you sure you want to delete {items.length === 1 ? "this item" : `${items.length} items`}? {items.length === 1 ? "It" : "They"} will be removed from your library entirely and removed from all albums.<br />You <span className="text-secondary-foreground font-bold">cannot</span> recover {items.length === 1 ? "it" : "them"} after deletion!</DialogDescription>
+                    <DialogTitle>Delete tag</DialogTitle>
+                    <DialogDescription>Are you sure you want to delete {tag ? "the" : "this"} tag{tag && ` "${tag.name}"`}? Any items with it will <span className="text-secondary-foreground font-bold">not</span> be removed.</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>No</Button>

@@ -52,6 +52,17 @@ export interface AlbumComp extends Album {
     peek_thumbs: string[];
 }
 
+export interface Tag {
+    id: string;
+    name: string;
+    color: string;
+    created_at: string;
+}
+
+export interface TagItemRef extends Tag {
+    added_at: string;
+}
+
 export interface ImportItem {
     source_path: string;
     live_path?: string;

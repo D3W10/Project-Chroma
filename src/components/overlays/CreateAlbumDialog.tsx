@@ -14,8 +14,8 @@ import type { Album } from "@/lib/models";
 interface CreateAlbumDialogProps {
     currentAlbum?: string;
     open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSuccess?: (album: Album) => void;
+    onOpenChange: (open: boolean) => unknown;
+    onSuccess?: (album: Album) => unknown;
 }
 
 export function CreateAlbumDialog({ currentAlbum, open, onOpenChange, onSuccess }: CreateAlbumDialogProps) {

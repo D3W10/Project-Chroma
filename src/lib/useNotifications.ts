@@ -5,12 +5,14 @@ import type { Notification, NotificationType } from "./models";
 interface NotificationStore {
     notifications: Notification[];
     isOpen: boolean;
+    hasUnread: boolean;
     pushNoti: <T, E = string>(title: string, description?: string, type?: NotificationType, options?: NotificationPromiseOptions<T, E>) => string;
     updateNoti: (id: string, updates: Partial<Notification>) => void;
     progressNoti: (id: string, progress: number) => void;
     clearNoti: (id: string) => void;
     clearAll: () => void;
     setIsOpen: (open: boolean) => void;
+    setHasUnread: (hasUnread: boolean) => void;
     getPeekNotification: () => Notification | null;
 }
 
@@ -33,7 +35,7 @@ interface NotificationPromiseOptions<T, E = string> {
 export const useNotifications = create<NotificationStore>((set, get) => ({
     notifications: [],
     isOpen: false,
-
+    hasUnread: false,
     pushNoti: <T, E = string>(title: string, description?: string, type: NotificationType = "info", { promise, hasProgress = false, peek, success, error, onSuccess, onError }: NotificationPromiseOptions<T, E> = {}) => {
         const id = self.crypto.randomUUID();
         const notification: Notification = {
@@ -51,7 +53,9 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             notifications: [notification, ...state.notifications],
         }));
 
-        const { isOpen } = get();
+        const { isOpen, setHasUnread } = get();
+
+        if (!isOpen) setHasUnread(true);
 
         if (type === "info") {
             if (!isOpen) toast.info(title, description ? { description } : undefined);
@@ -99,7 +103,6 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
 
         return id;
     },
-
     updateNoti: (id, updates) => {
         set(state => ({
             notifications: state.notifications.map(notification =>
@@ -107,7 +110,6 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             ),
         }));
     },
-
     progressNoti: (id, progress) => {
         set(state => ({
             notifications: state.notifications.map(notification =>
@@ -115,7 +117,6 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             ),
         }));
     },
-
     clearNoti: id => {
         if (get().notifications.find(noti => noti.id === id)?.type === "promise") return;
 
@@ -123,17 +124,17 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
             notifications: state.notifications.filter(noti => noti.id !== id),
         }));
     },
-
     clearAll: () => {
         set(state => ({
             notifications: state.notifications.filter(noti => noti.type === "promise"),
         }));
     },
-
     setIsOpen: open => {
-        set({ isOpen: open });
+        set({ isOpen: open, hasUnread: open ? false : undefined });
     },
-
+    setHasUnread: hasUnread => {
+        set({ hasUnread });
+    },
     getPeekNotification: () => {
         const { notifications } = get();
         return notifications.find(n => n.type === "promise") || null;

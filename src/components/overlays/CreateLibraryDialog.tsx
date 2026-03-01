@@ -6,7 +6,7 @@ import { useLibraryCreate, LibraryCreate } from "@/components/custom/LibraryCrea
 
 interface CreateLibraryDialogProps {
     open: boolean;
-    onOpenChange: (open: boolean) => void;
+    onOpenChange: (open: boolean) => unknown;
 }
 
 export function CreateLibraryDialog({ open, onOpenChange }: CreateLibraryDialogProps) {

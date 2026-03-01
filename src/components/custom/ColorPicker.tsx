@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useState } from "react";
 import colors from "tailwindcss/colors";
 import { IconHelpCircle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function ColorPicker({ className, disabled, color, onColorSelect, ...prop
             <Button variant="link" className={cn("h-6 p-0 relative flex-1 rounded-md bg-stone-500 hover:opacity-80 before:block before:absolute before:inset-0.5 before:rounded-[0.3rem] before:transition-shadow", color === colors.stone[500] ? "before:inset-ring-2 before:inset-ring-background" : "")} disabled={disabled} onClick={() => colorSelected(colors.stone[500])} />
             <Popover>
                 <PopoverTrigger asChild>
-                    <Button variant="link" className={cn("h-6 p-0 relative flex-1 rounded-md hover:opacity-80 before:block before:absolute before:inset-0.5 before:rounded-sm before:transition-shadow", customColor && color ? "bg-(--custom-color) before:inset-ring-2 before:inset-ring-background" : "bg-(image:--rainbow)")} disabled={disabled} onClick={customSelected} style={{ "--custom-color": color } as CSSProperties} />
+                    <Button variant="link" className={cn("h-6 p-0 relative flex-1 rounded-md hover:opacity-80 before:block before:absolute before:inset-0.5 before:rounded-sm before:transition-shadow", customColor && color ? "before:inset-ring-2 before:inset-ring-background" : "bg-(image:--rainbow)")} disabled={disabled} onClick={customSelected} style={{ backgroundColor: color }} />
                 </PopoverTrigger>
                 <PopoverContent className="p-2 gap-2 rounded-2xl">
                     <FieldLabel className="pl-0.5">

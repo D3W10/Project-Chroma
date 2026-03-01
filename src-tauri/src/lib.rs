@@ -37,9 +37,16 @@ pub fn run() {
             library::delete_items,
             library::get_albums,
             library::create_album,
+            library::get_album_items,
             library::add_items_to_album,
             library::remove_items_from_album,
-            library::get_album_items,
+            library::get_tags,
+            library::create_tag,
+            library::update_tag,
+            library::delete_tags,
+            library::get_item_tags,
+            library::add_tags_to_items,
+            library::remove_tags_from_items,
         ])
         .setup(|app| {
             let _ = app.handle().store("config.json");

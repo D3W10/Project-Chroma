@@ -38,7 +38,7 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
         <div className={cn("flex flex-col sticky inset-0 z-50 transition-colors duration-200", !item ? "bg-transparent pointer-events-none" : "bg-background")}>
             <TransformWrapper centerOnInit>
                 <Toolbar className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
-                    <ToolbarGroup placement="left">
+                    <ToolbarGroup shade="left">
                         <ReturnButton setItem={setItem} />
                         {item?.live_video && (
                             <Button variant="outline" className="pl-2 pr-2.5 gap-x-2">
@@ -47,7 +47,7 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                             </Button>
                         )}
                     </ToolbarGroup>
-                    <ToolbarGroup placement="right">
+                    <ToolbarGroup shade="right">
                         <ZoomControls />
                         <ButtonGroup>
                             <Button variant="outline" size="icon" onClick={setAsFavorite}>

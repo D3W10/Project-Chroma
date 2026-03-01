@@ -46,7 +46,7 @@ function RouteComponent() {
 
     return (
         <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", items.length <= 0 && "flex flex-col", (isPending || viewingItem) && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
-            <Toolbar placement="full">
+            <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenAddItems(true)}>
                         <IconPlus className="size-4 mr-0.5" />

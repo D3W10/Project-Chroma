@@ -3,14 +3,14 @@ import { cn } from "@/lib/utils";
 interface Props {
     children?: React.ReactNode;
     className?: string;
-    placement?: "full";
+    shade?: "full" | "separate";
 }
 
-export function Toolbar({ children, className, placement }: Props) {
+export function Toolbar({ children, className, shade = "separate" }: Props) {
     return (
-        <div className={cn("p-2 flex justify-between items-center sticky top-0 left-0 right-0 z-10", className)}>
+        <div className={cn("p-2 flex justify-between items-center gap-2 sticky top-0 left-0 right-0 z-10 *:flex-1 [&>div:first-of-type]:justify-start [&>div:last-of-type]:justify-end", className)}>
             {children}
-            {placement === "full" && <ToolbarShadeFull />}
+            {shade === "full" && <ToolbarShadeFull />}
         </div>
     );
 }
@@ -18,15 +18,15 @@ export function Toolbar({ children, className, placement }: Props) {
 interface GroupProps {
     children?: React.ReactNode;
     className?: string;
-    placement?: "left" | "right";
+    shade?: "left" | "right";
 }
 
-export function ToolbarGroup({ children, className, placement }: GroupProps) {
+export function ToolbarGroup({ children, className, shade }: GroupProps) {
     return (
-        <div className={cn("flex gap-2 relative", className)}>
+        <div className={cn("flex justify-center gap-2 relative", className)}>
             {children}
-            {placement === "left" && <ToolbarShadeLeft />}
-            {placement === "right" && <ToolbarShadeRight />}
+            {shade === "left" && <ToolbarShadeLeft />}
+            {shade === "right" && <ToolbarShadeRight />}
         </div>
     );
 }
@@ -39,8 +39,8 @@ interface ShadeProps {
 export function ToolbarShadeFull({ shadowClass, blurClass }: ShadeProps) {
     return (
         <>
-            <div className={cn("absolute inset-0 -bottom-4 bg-background/70 mask-b-from-25% -z-20", shadowClass)} />
-            <div className={cn("absolute inset-0 backdrop-blur-xs mask-b-from-25% -z-10", blurClass)} />
+            <span className={cn("absolute inset-0 -bottom-4 bg-background/70 mask-b-from-25% -z-20", shadowClass)} />
+            <span className={cn("absolute inset-0 backdrop-blur-xs mask-b-from-25% -z-10", blurClass)} />
         </>
     );
 }

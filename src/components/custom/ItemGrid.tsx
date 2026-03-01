@@ -44,7 +44,7 @@ export function ItemGrid<T extends Item>({ items, isPending, parent, isAlbum, se
 
     return (
         <div
-            className={cn("w-full relative py-2", !isPending && items.length === 0 && "flex justify-center items-center flex-1")}
+            className={cn("w-full relative", !isPending && items.length === 0 && "flex justify-center items-center flex-1")}
             style={{
                 height: items.length > 0 ? virtualizer.getTotalSize() + 16 : undefined,
             }}

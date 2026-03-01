@@ -668,6 +668,11 @@ pub fn create_album(app: AppHandle, library_id: String, name: String, descriptio
 }
 
 #[tauri::command]
+pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<modules::ItemAlbumRef>, String> {
+    db::fetch_album_items(&get_db_connection(&app, &library_id)?, &album_id)
+}
+
+#[tauri::command]
 pub fn add_items_to_album(app: AppHandle, library_id: String, album_id: String, item_ids: Vec<String>) -> Result<(), String> {
     db::add_items_to_album(&get_db_connection(&app, &library_id)?, &album_id, &item_ids)
 }
@@ -678,6 +683,59 @@ pub fn remove_items_from_album(app: AppHandle, library_id: String, album_id: Str
 }
 
 #[tauri::command]
-pub fn get_album_items(app: AppHandle, library_id: String, album_id: String) -> Result<Vec<modules::ItemAlbumRef>, String> {
-    db::fetch_album_items(&get_db_connection(&app, &library_id)?, &album_id)
+pub fn get_tags(app: AppHandle, library_id: String) -> Result<Vec<modules::Tag>, String> {
+    db::fetch_tags(&get_db_connection(&app, &library_id)?)
+}
+
+#[tauri::command]
+pub fn create_tag(app: AppHandle, library_id: String, name: String, color: String) -> Result<modules::Tag, String> {
+    let conn = get_db_connection(&app, &library_id)?;
+    let now = Utc::now();
+    let tag = modules::Tag {
+        id: Uuid::new_v4().to_string(),
+        name: name,
+        color: color,
+        created_at: now,
+    };
+
+    db::insert_tag(&conn, &tag)?;
+    Ok(tag)
+}
+
+#[tauri::command]
+pub fn update_tag(app: AppHandle, library_id: String, tag_id: String, name: Option<String>, color: Option<String>) -> Result<(), String> {
+    db::update_tag(&get_db_connection(&app, &library_id)?, &tag_id, name.as_deref(), color.as_deref())?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn delete_tags(app: AppHandle, library_id: String, tag_ids: Vec<String>) -> Result<(), String> {
+    for tag_id in &tag_ids {
+        db::delete_tag(&get_db_connection(&app, &library_id)?, &tag_id)?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_item_tags(app: AppHandle, library_id: String, item_id: String) -> Result<Vec<modules::TagItemRef>, String> {
+    db::fetch_item_tags(&get_db_connection(&app, &library_id)?, &item_id)
+}
+
+#[tauri::command]
+pub fn add_tags_to_items(app: AppHandle, library_id: String, item_ids: Vec<String>, tag_ids: Vec<String>) -> Result<(), String> {
+    if item_ids.is_empty() || tag_ids.is_empty() {
+        return Ok(());
+    }
+
+    db::add_tags_to_items(&get_db_connection(&app, &library_id)?, &item_ids, &tag_ids)
+}
+
+#[tauri::command]
+pub fn remove_tags_from_items(app: AppHandle, library_id: String, item_ids: Vec<String>, tag_ids: Vec<String>) -> Result<(), String> {
+    if item_ids.is_empty() || tag_ids.is_empty() {
+        return Ok(());
+    }
+
+    db::remove_tags_from_items(&get_db_connection(&app, &library_id)?, &item_ids, &tag_ids)
 }

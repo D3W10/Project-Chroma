@@ -103,7 +103,7 @@ function RouteComponent() {
 
     return (
         <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isPendingA && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
-            <Toolbar placement="full">
+            <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenCreateAlbum(true)}>
                         <IconFolderPlus className="size-4 mr-0.5" />

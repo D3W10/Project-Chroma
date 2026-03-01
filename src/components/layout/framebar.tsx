@@ -22,7 +22,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
     const [openAddLibrary, setOpenAddLibrary] = useState(false);
     const [libraryToAdd, setLibraryToAdd] = useState<LibraryDetailsPath>();
     const { selectedLibrary, setSelectedLibrary, setOpenCreateLibrary } = useLibrary();
-    const { notifications, isOpen, pushNoti, setIsOpen } = useNotifications();
+    const { notifications, isOpen, hasUnread, pushNoti, setIsOpen } = useNotifications();
     const location = useLocation();
 
     const peeking = peekNotification !== null && !!peekNotification.peek;
@@ -115,14 +115,17 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                     <div className="flex items-center gap-1">
                         <Popover open={isOpen} onOpenChange={setIsOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className={"text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
+                                <Button variant="ghost" size="icon" className={"relative text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
                                     {peekNotification ? (
                                         <>
                                             <Spinner />
                                             {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
                                         </>
                                     ) : (
-                                        <IconClipboardList className="size-5" />
+                                        <>
+                                            <IconClipboardList className="size-5" />
+                                            {hasUnread && <div className="size-1 absolute bottom-2 right-2.5 bg-primary ring-2 ring-background rounded-full" />}
+                                        </>
                                     )}
                                 </Button>
                             </PopoverTrigger>

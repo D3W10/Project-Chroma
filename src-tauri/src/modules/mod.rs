@@ -69,6 +69,21 @@ pub struct AlbumItem {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct Tag {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TagItemRef {
+    #[serde(flatten)]
+    pub tag: Tag,
+    pub added_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ImportItem {
     pub source_path: String,
     pub live_path: Option<String>,

@@ -14,7 +14,7 @@ export function useAction() {
 
         queryClient.setQueriesData(
             {
-                predicate: query => query.queryKey[0] === selectedLibrary.id && (query.queryKey[1] === "items" || (query.queryKey[1] === "albums" && query.queryKey[3] === "items")),
+                predicate: q => q.queryKey[0] === selectedLibrary.id && (q.queryKey[1] === "items" || (q.queryKey[1] === "albums" && q.queryKey[3] === "items")),
             },
             oldData => {
                 if (!oldData || typeof oldData !== "object" || !("data" in oldData) || !Array.isArray(oldData.data))
@@ -115,11 +115,84 @@ export function useAction() {
         });
     }
 
+    async function createTag(name: string, color: string) {
+        if (!selectedLibrary) return;
+
+        const { data, error } = await invoke.createTag({
+            libraryId: selectedLibrary.id,
+            name,
+            color,
+        });
+
+        if (!error)
+            queryClient.invalidateQueries({ queryKey: [selectedLibrary?.id, "tags"] });
+
+        return data;
+    }
+
+    async function updateTag(tagId: string, opts: { name?: string; color?: string }) {
+        if (!selectedLibrary) return;
+
+        const { data, error } = await invoke.updateTag({
+            libraryId: selectedLibrary.id,
+            tagId,
+            name: opts.name,
+            color: opts.color,
+        });
+
+        if (!error)
+            queryClient.invalidateQueries({ queryKey: [selectedLibrary?.id, "tags"] });
+
+        return data;
+    }
+
+    async function deleteTags(tagIds: string[]) {
+        if (!selectedLibrary || !tagIds.length) return;
+
+        await invoke.deleteTags({ libraryId: selectedLibrary.id, tagIds });
+        queryClient.invalidateQueries({ predicate: q => q.queryKey.includes("tags") });
+    }
+
+    async function addTagsToItems(opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) {
+        if (!selectedLibrary) return;
+
+        const { data, error } = await invoke.addTagsToItems({
+            libraryId: selectedLibrary.id,
+            itemIds: opts.itemIds,
+            tagIds: opts.tagIds,
+        });
+
+        if (!error)
+            queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === selectedLibrary.id && q.queryKey[1] === "items" && q.queryKey[3] === "tags" });
+
+        return data;
+    }
+
+    async function removeTagsFromItems(opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) {
+        if (!selectedLibrary) return;
+
+        const { data, error } = await invoke.removeTagsFromItems({
+            libraryId: selectedLibrary.id,
+            itemIds: opts.itemIds,
+            tagIds: opts.tagIds,
+        });
+
+        if (!error)
+            queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === selectedLibrary.id && q.queryKey[1] === "items" && q.queryKey[3] === "tags" });
+
+        return data;
+    }
+
     return {
         setItemsFavorite,
         transferItems,
         deleteItems,
         createAlbum,
         addItemsToAlbum,
+        createTag,
+        updateTag,
+        deleteTags,
+        addTagsToItems,
+        removeTagsFromItems,
     };
 }

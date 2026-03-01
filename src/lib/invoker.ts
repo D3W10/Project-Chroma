@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tryCatch } from "./utils";
-import type { Album, AlbumComp, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails } from "./models";
+import type { Album, AlbumComp, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails, Tag, TagItemRef } from "./models";
 
 export function getLibraries() {
     return tryCatch(() => invoke<Library[]>("get_libraries"));
@@ -82,6 +82,10 @@ export function createAlbum(opts: { libraryId: string; name: string; description
     return tryCatch(() => invoke<Album>("create_album", opts));
 }
 
+export function getAlbumItems(opts: { libraryId: string; albumId: string }) {
+    return tryCatch(() => invoke<ItemAlbumRef[]>("get_album_items", opts));
+}
+
 export function addItemsToAlbum(opts: { libraryId: string; albumId: string; itemIds: string[] }) {
     return tryCatch(() => invoke("add_items_to_album", opts));
 }
@@ -90,6 +94,30 @@ export function removeItemsFromAlbum(opts: { libraryId: string; albumId: string;
     return tryCatch(() => invoke("remove_items_from_album", opts));
 }
 
-export function getAlbumItems(opts: { libraryId: string; albumId: string }) {
-    return tryCatch(() => invoke<ItemAlbumRef[]>("get_album_items", opts));
+export function getTags(opts: { libraryId: string }) {
+    return tryCatch(() => invoke<Tag[]>("get_tags", opts));
+}
+
+export function createTag(opts: { libraryId: string; name: string; color: string }) {
+    return tryCatch(() => invoke<Tag>("create_tag", opts));
+}
+
+export function updateTag(opts: { libraryId: string; tagId: string; name?: string; color?: string }) {
+    return tryCatch(() => invoke<Tag>("update_tag", opts));
+}
+
+export function deleteTags(opts: { libraryId: string; tagIds: string[] }) {
+    return tryCatch(() => invoke("delete_tags", opts));
+}
+
+export function getItemTags(opts: { libraryId: string; itemId: string }) {
+    return tryCatch(() => invoke<TagItemRef[]>("get_item_tags", opts));
+}
+
+export function addTagsToItems(opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) {
+    return tryCatch(() => invoke("add_tags_to_items", opts));
+}
+
+export function removeTagsFromItems(opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) {
+    return tryCatch(() => invoke("remove_tags_from_items", opts));
 }

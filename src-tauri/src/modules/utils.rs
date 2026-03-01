@@ -118,6 +118,22 @@ pub fn deserialize_album_computed(row: &Row<'_>) -> Result<modules::AlbumComp, r
     })
 }
 
+pub fn deserialize_tag(row: &Row<'_>) -> Result<modules::Tag, rusqlite::Error> {
+    Ok(modules::Tag {
+        id: row.get("id")?,
+        name: row.get("name")?,
+        color: row.get("color")?,
+        created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>("created_at")?).unwrap().with_timezone(&Utc),
+    })
+}
+
+pub fn deserialize_tag_item_ref(row: &Row<'_>) -> Result<modules::TagItemRef, rusqlite::Error> {
+    Ok(modules::TagItemRef {
+        tag: deserialize_tag(row)?,
+        added_at: DateTime::parse_from_rfc3339(&row.get::<_, String>("added_at")?).unwrap().with_timezone(&Utc),
+    })
+}
+
 pub fn generate_image_thumbnail(img: &DynamicImage, output_path: &Path) -> Result<(), String> {
     let thumb = img.thumbnail(512, 512);
 
