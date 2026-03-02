@@ -106,6 +106,11 @@ export type Settings = {
         livePhotos: boolean;
         edits: boolean;
     };
+    exportOptions: {
+        livePhotos: boolean;
+        edits: boolean;
+        adjustments: boolean;
+    };
 };
 
 export interface LibraryDetails {

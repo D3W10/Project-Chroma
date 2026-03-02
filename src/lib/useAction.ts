@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import * as invoke from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
+import { pathToName } from "@/lib/utils";
 import type { Album, Item, Library } from "@/lib/models";
 
 export function useAction() {
@@ -73,6 +74,23 @@ export function useAction() {
         await invoke.deleteItems({ libraryId: selectedLibrary.id, itemIds });
         syncItems(items => items.filter(item => !itemIds.includes(item.id)));
         pushNoti("Items deleted", `${itemIds.length} ${itemIds.length === 1 ? "item" : "items"} have been deleted`, "success");
+    }
+
+    async function exportItems(destination: string, itemIds: string[], live: boolean, edits: boolean, adjustments: boolean) {
+        if (!selectedLibrary || !itemIds.length) return;
+
+        pushNoti("Exporting items", "Exporting " + itemIds.length + " items to \"" + pathToName(destination) + "\"", "promise", {
+            promise: invoke.exportItems({ libraryId: selectedLibrary.id, destination, itemIds, live, edits, adjustments }),
+            peek: "Exporting items",
+            success: () => ({
+                title: "Items exported",
+                description: itemIds.length + " items have been exported to \"" + pathToName(destination) + "\"",
+            }),
+            error: () => ({
+                title: "Error exporting items",
+                description: "An error occurred and some of the items could not be exported",
+            }),
+        });
     }
 
     async function createAlbum(name: string, parent: string | undefined, color: string, icon: string) {
@@ -192,6 +210,7 @@ export function useAction() {
         createTag,
         updateTag,
         deleteTags,
+        exportItems,
         addTagsToItems,
         removeTagsFromItems,
     };

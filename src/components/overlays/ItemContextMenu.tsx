@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { IconArchive, IconCircleMinus, IconEyeOff, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconShare2, IconTag, IconTrash } from "@tabler/icons-react";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DeleteItemDialog } from "@/components/overlays/DeleteItemDialog";
+import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
 import { TagManagementPalette } from "@/components/overlays/TagManagementPalette";
 import { TransferItemsDialog } from "@/components/overlays/TransferItemsDialog";
@@ -20,6 +21,7 @@ export function ItemContextMenu<T extends Item>({ children, isAlbum = false, sel
     const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
     const [transferItemDialog, setTransferItemDialog] = useState(false);
     const [tagManagementPalette, setTagManagementPalette] = useState(false);
+    const [exportItemDialog, setExportItemDialog] = useState(false);
     const [deleteItemDialog, setDeleteItemDialog] = useState(false);
     const action = useAction();
     const { libraries } = useLibrary();
@@ -38,6 +40,7 @@ export function ItemContextMenu<T extends Item>({ children, isAlbum = false, sel
                 <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum(selected.map(p => p.id), a)} />
                 <TransferItemsDialog open={transferItemDialog} onOpenChange={setTransferItemDialog} selected={selected} />
                 <TagManagementPalette open={tagManagementPalette} onOpenChange={setTagManagementPalette} items={selected} />
+                <ExportDialog open={exportItemDialog} onOpenChange={setExportItemDialog} items={selected} />
                 <DeleteItemDialog open={deleteItemDialog} onOpenChange={setDeleteItemDialog} items={selected} onConfirm={handleDelete} />
             </ContextMenuTrigger>
             <ContextMenuContent>
@@ -74,7 +77,7 @@ export function ItemContextMenu<T extends Item>({ children, isAlbum = false, sel
                     <IconTag className="size-4.5" />
                     Tags
                 </ContextMenuItem>
-                <ContextMenuItem>
+                <ContextMenuItem onClick={() => setExportItemDialog(true)}>
                     <IconShare2 className="size-4.5" />
                     Export
                 </ContextMenuItem>

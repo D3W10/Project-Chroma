@@ -73,7 +73,7 @@ export function TransferItemsDialog({ open, onOpenChange, selected }: TransferIt
                             <IconColor color={selectedLibrary?.color} size="2xl">{selectedLibrary?.icon}</IconColor>
                             <h3 className="pb-2 truncate text-lg font-semibold">{selectedLibrary?.name}</h3>
                         </div>
-                        <IconArrowRight className="size-10 text-muted-foreground" />
+                        <IconArrowRight className="size-10 -mt-14 text-muted-foreground" />
                         <div className="px-8 py-4 flex flex-col justify-center items-center flex-1 gap-5">
                             <AnimatePresence initial={false} mode="wait">
                                 <motion.div initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ duration: 0.2, ease: "easeOut" }} key={targetLibrary?.id}>

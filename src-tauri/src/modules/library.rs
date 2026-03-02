@@ -638,6 +638,121 @@ pub fn delete_items(app: AppHandle, library_id: String, item_ids: Vec<String>) -
     Ok(())
 }
 
+struct ExportTask {
+    source_path: PathBuf,
+    target_suffix: &'static str,
+    ext: String,
+}
+
+#[tauri::command]
+pub fn export_items(app: AppHandle, library_id: String, destination: String, item_ids: Vec<String>, live: bool, edits: bool, adjustments: bool) -> Result<(), String> {
+    if item_ids.is_empty() {
+        return Ok(());
+    }
+
+    let items = db::fetch_items_by_id(&get_db_connection(&app, &library_id)?, &item_ids)?;
+    let destination_path = Path::new(&destination);
+
+    if !destination_path.exists() {
+        fs::create_dir_all(destination_path).map_err(|e| utils::treat(e, "Unable to export item"))?;
+    }
+
+    let library_root = get_library_root_path(&app, &library_id)?;
+    let originals_root = library_root.join("originals");
+    let adjustments_root = library_root.join("adjustments");
+
+    for item in items {
+        let item_stem = Path::new(&item.original_name)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or(&item.original_name);
+
+        let mut files_to_export: Vec<ExportTask> = Vec::new();
+        let get_ext = |filename: &str| -> String {
+            Path::new(filename)
+                .extension()
+                .and_then(|s| s.to_str())
+                .map(|s| s.to_string())
+                .unwrap_or_default()
+        };
+        let get_name_with_ext = |ext: &str| -> String {
+            format!("{}.{}", item.id, ext)
+        };
+
+        let ext = get_ext(&item.original_name);
+        files_to_export.push(ExportTask {
+            source_path: originals_root.join(get_name_with_ext(&ext)),
+            target_suffix: "",
+            ext,
+        });
+
+        if live {
+            if let Some(ref live_video) = item.live_video {
+                let ext = get_ext(live_video);
+                files_to_export.push(ExportTask {
+                    source_path: originals_root.join(get_name_with_ext(&ext)),
+                    target_suffix: "",
+                    ext,
+                });
+            }
+        }
+        if edits {
+            if let Some(ref raw_name) = item.raw_original_name {
+                let ext = get_ext(raw_name);
+                files_to_export.push(ExportTask {
+                    source_path: originals_root.join(get_name_with_ext(&ext)),
+                    target_suffix: "-orig",
+                    ext,
+                });
+            }
+        }
+        if live && edits {
+            if let Some(ref raw_live) = item.raw_live_video {
+                let ext = get_ext(raw_live);
+                files_to_export.push(ExportTask {
+                    source_path: originals_root.join(get_name_with_ext(&ext)),
+                    target_suffix: "-orig",
+                    ext,
+                });
+            }
+        }
+        if adjustments && item.has_adjustments {
+            files_to_export.push(ExportTask {
+                source_path: adjustments_root.join(get_name_with_ext("aae")),
+                target_suffix: "",
+                ext: "aae".to_string(),
+            });
+        }
+
+        let mut suffix_counter = 1;
+        let mut final_stem = item_stem.to_string();
+
+        loop {
+            let has_conflict = files_to_export.iter().any(|task| {
+                destination_path.join(&format!("{}{}.{}", final_stem, task.target_suffix, task.ext)).exists()
+            });
+
+            if !has_conflict {
+                break;
+            }
+
+            suffix_counter += 1;
+            final_stem = format!("{} ({})", item_stem, suffix_counter);
+        }
+
+        for task in files_to_export {
+            let target_filename = format!("{}{}.{}", final_stem, task.target_suffix, task.ext);
+            let target_path = destination_path.join(&target_filename);
+
+            if task.source_path.exists() {
+                fs::copy(&task.source_path, &target_path).map_err(|e| utils::treat(&e, &format!("Failed to copy {:?} to {:?}: {}", task.source_path, target_path, e)))?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_albums(app: AppHandle, library_id: String, parent: Option<String>) -> Result<Vec<modules::AlbumComp>, String> {
     db::fetch_albums(&get_db_connection(&app, &library_id)?, parent)

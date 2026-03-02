@@ -16,6 +16,11 @@ export const defaultSettings = {
         livePhotos: false,
         edits: false,
     },
+    exportOptions: {
+        livePhotos: false,
+        edits: false,
+        adjustments: false,
+    },
 } satisfies Settings;
 
 export const useSettings = create<SettingsState>((set, get) => ({

@@ -1,4 +1,5 @@
 use chrono::Utc;
+use rayon::iter::{ParallelIterator, repeat};
 use rusqlite::{Connection, ToSql, params, params_from_iter};
 use serde_json::Value;
 use std::path::Path;
@@ -150,6 +151,23 @@ pub fn fetch_library_info(conn: &Connection) -> Result<Value, String> {
 pub fn fetch_items(conn: &Connection) -> Result<Vec<modules::Item>, String> {
     let mut stmt = conn.prepare("SELECT * FROM item ORDER BY taken_date DESC").map_err(|e| utils::treat(e, "Unable to obtain items"))?;
     let item_iter = stmt.query_map([], utils::deserialize_item).map_err(|e| utils::treat(e, "Unable to obtain items"))?;
+
+    let mut items = Vec::new();
+    for item in item_iter {
+        items.push(item.map_err(|e| utils::treat(e, "Unable to obtain items"))?);
+    }
+
+    Ok(items)
+}
+
+pub fn fetch_items_by_id(conn: &Connection, item_ids: &Vec<String>) -> Result<Vec<modules::Item>, String> {
+    let param_places = repeat("?").take(item_ids.len()).collect::<Vec<_>>().join(",");
+
+    let query = format!("SELECT * FROM item WHERE id IN ({})", param_places);
+    let mut stmt = conn.prepare(&query).map_err(|e| utils::treat(e, "Unable to obtain items"))?;
+
+    let item_iter = stmt.query_map(params_from_iter(item_ids.iter()), utils::deserialize_item)
+        .map_err(|e| utils::treat(e, "Unable to obtain items"))?;
 
     let mut items = Vec::new();
     for item in item_iter {

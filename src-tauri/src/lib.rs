@@ -35,6 +35,7 @@ pub fn run() {
             library::set_items_favorite,
             library::transfer_items,
             library::delete_items,
+            library::export_items,
             library::get_albums,
             library::create_album,
             library::get_album_items,

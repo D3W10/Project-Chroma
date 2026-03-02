@@ -56,7 +56,7 @@ export function isValidColor(color: string) {
     return !!isValid;
 }
 
-export const pathToName = (p: string) => p.split("/").pop() || "";
+export const pathToName = (p: string) => /[^\\/]+(?=[/|\\]?$)/g.exec(p)?.[0] || "";
 export const pathToStem = (p: string) => /([^/\\]+?)(?:\.[^.]*$|$)/g.exec(p)?.[1] || "";
 
 export function treatDataRefresh<T extends { id: string }>(raw: T[] | null | undefined, setData: (data: T[]) => unknown, selected?: T[], setSelected?: (selected: T[]) => void) {

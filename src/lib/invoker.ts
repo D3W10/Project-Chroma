@@ -74,6 +74,10 @@ export function deleteItems(opts: { libraryId: string; itemIds: string[] }) {
     return tryCatch(() => invoke("delete_items", opts));
 }
 
+export function exportItems(opts: { libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }) {
+    return tryCatch(() => invoke("export_items", opts));
+}
+
 export function getAlbums(opts: { libraryId: string; parent?: string }) {
     return tryCatch(() => invoke<AlbumComp[]>("get_albums", opts));
 }
