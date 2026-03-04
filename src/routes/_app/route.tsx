@@ -6,12 +6,14 @@ import { animate } from "@/components/animated";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { IconBox } from "@/components/custom/IconBox";
+import { PhotoViewer } from "@/components/custom/PhotoViewer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { checkLibraryHealth, removeLibrary, updateLibraryPath, upgradeLibrary } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useMigration } from "@/lib/useMigration";
 import { useNotifications } from "@/lib/useNotifications";
+import { useViewer } from "@/lib/useViewer";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app")({
@@ -23,6 +25,7 @@ function RouteComponent() {
     const { migrating, setMigrating } = useMigration();
     const { pushNoti } = useNotifications();
     const queryClient = useQueryClient();
+    const { viewingItem, setViewingItem } = useViewer();
 
     const { isPending, data: libraryExists } = useQuery({
         queryKey: [selectedLibrary?.id, "library-health"],
@@ -77,7 +80,7 @@ function RouteComponent() {
     return (
         <div className="min-h-0 flex justify-center items-center flex-1">
             <Sidebar collapsed={!successLoaded} />
-            <div className={cn("h-full flex flex-col flex-1 bg-background ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200 *:overscroll-none", successLoaded ? "rounded-tl-xl" : "")}>
+            <div className={cn("h-full flex flex-col flex-1 relative bg-background ring-1 ring-input shadow-md overflow-hidden transition-[border-radius] duration-200 *:overscroll-none", successLoaded ? "rounded-tl-xl" : "")}>
                 {successLoaded && selectedLibrary ? (
                     <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
@@ -147,6 +150,7 @@ function RouteComponent() {
                         </animate.div>
                     </CenterLayout>
                 )}
+                <PhotoViewer item={viewingItem} setItem={setViewingItem} />
             </div>
         </div>
     );

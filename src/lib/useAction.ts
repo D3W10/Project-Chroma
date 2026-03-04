@@ -129,6 +129,7 @@ export function useAction() {
             }),
             onSuccess: () => {
                 queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "albums", album.id, "items"] });
+                queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "albums", album.parent] });
             },
         });
     }

@@ -9,7 +9,7 @@ import { ButtonGroup } from "@/components/ui/button-group";
 import { IconBox } from "@/components/custom/IconBox";
 import { ItemGrid } from "@/components/custom/ItemGrid";
 import { PhotoViewer } from "@/components/custom/PhotoViewer";
-import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
+import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { ImportItemsDialog } from "@/components/overlays/ImportItemsDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
 import { getItems } from "@/lib/invoker";
@@ -18,7 +18,7 @@ import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
-import { cn, treatDataRefresh } from "@/lib/utils";
+import { useViewer } from "@/lib/useViewer";
 
 export const Route = createFileRoute("/_app/")({
     component: RouteComponent,
@@ -26,14 +26,15 @@ export const Route = createFileRoute("/_app/")({
 
 function RouteComponent() {
     const [items, setItems] = useState<Item[]>([]);
-    const [viewingItem, setViewingItem] = useState<Item>();
     const [openAddItems, setOpenAddItems] = useState(false);
     const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
+    const [exportDialog, setExportDialog] = useState(false);
     const gridParent = useRef<HTMLDivElement>(null);
     const action = useAction();
     const { selectedLibrary } = useLibrary();
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items });
     const { settings, updateSettings } = useSettings();
+    const { viewingItem, setViewingItem } = useViewer();
 
     const { isPending, data } = useQuery({
         queryKey: [selectedLibrary?.id, "items"],
@@ -54,6 +55,7 @@ function RouteComponent() {
                     </Button>
                     <ImportItemsDialog openDialog={openAddItems} onOpenChange={setOpenAddItems} />
                     <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum(selected.map(p => p.id), a)} />
+                    <ExportDialog open={exportDialog} onOpenChange={setExportDialog} items={selected} />
                 </ToolbarGroup>
                 <ToolbarGroup>
                     <ButtonGroup>
@@ -97,7 +99,6 @@ function RouteComponent() {
                 handleRightClick={handleRightClick}
                 empty={<GridEmpty onAdd={() => setOpenAddItems(true)} />}
             />
-            <PhotoViewer item={viewingItem} setItem={setViewingItem} />
         </div>
     );
 }

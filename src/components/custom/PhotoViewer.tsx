@@ -5,9 +5,11 @@ import { IconArrowsMaximize, IconArrowsMinimize, IconChevronLeft, IconFolderPlus
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
+import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
+import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
-import { cn, getOriginalPath } from "@/lib/utils";
+import { cn, getOriginalPath, getThumbPath } from "@/lib/utils";
 import type { Item } from "@/lib/models";
 
 interface PhotoViewerProps {
@@ -16,12 +18,13 @@ interface PhotoViewerProps {
 }
 
 export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
+    const [loaded, setLoaded] = useState(false);
     const [favorite, setFavorite] = useState(false);
+    const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
+    const [exportDialog, setExportDialog] = useState(false);
     const [fullscreen, setFullscreen] = useState(false);
     const action = useAction();
     const { selectedLibrary } = useLibrary();
-
-    if (!selectedLibrary) return null;
 
     async function setAsFavorite() {
         if (!item) return;
@@ -30,13 +33,16 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
     }
 
     useEffect(() => {
+        setLoaded(false);
         if (item)
             setFavorite(item.is_favorite);
     }, [item]);
 
+    if (!selectedLibrary) return null;
+
     return (
-        <div className={cn("flex flex-col sticky inset-0 z-50 transition-colors duration-200", !item ? "bg-transparent pointer-events-none" : "bg-background")}>
-            <TransformWrapper centerOnInit>
+        <div className={cn("flex flex-col absolute inset-0 z-50 transition-colors duration-200", !item ? "bg-transparent pointer-events-none" : "bg-background")}>
+            <TransformWrapper centerOnInit disablePadding>
                 <Toolbar className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
                     <ToolbarGroup shade="left">
                         <ReturnButton setItem={setItem} />
@@ -46,6 +52,12 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                                 <span className="uppercase">Live</span>
                             </Button>
                         )}
+                        {item && (
+                            <>
+                                <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum([item.id], a)} />
+                                <ExportDialog open={exportDialog} onOpenChange={setExportDialog} items={[item]} />
+                            </>
+                        )}
                     </ToolbarGroup>
                     <ToolbarGroup shade="right">
                         <ZoomControls />
@@ -53,10 +65,10 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                             <Button variant="outline" size="icon" onClick={setAsFavorite}>
                                 {favorite ? <IconHeartFilled className="size-5" /> : <IconHeart className="size-5" />}
                             </Button>
-                            <Button variant="outline" size="icon">
+                            <Button variant="outline" size="icon" onClick={() => setAddToAlbumDialog(true)}>
                                 <IconFolderPlus className="size-5" />
                             </Button>
-                            <Button variant="outline" size="icon">
+                            <Button variant="outline" size="icon" onClick={() => setExportDialog(true)}>
                                 <IconShare2 className="size-5" />
                             </Button>
                         </ButtonGroup>
@@ -70,13 +82,21 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                         </ButtonGroup>
                     </ToolbarGroup>
                 </Toolbar>
-                <TransformComponent wrapperStyle={{ width: "100%", height: "100%", willChange: "transform" }} key={item?.id}>
+                <TransformComponent
+                    key={item?.id}
+                    contentClass="max-w-full max-h-full z-2"
+                    wrapperStyle={{ width: "100%", height: "100%", containerType: "size", willChange: "transform" }}
+                    contentStyle={{ width: `min(100cqw, 100cqh * (${item?.width}/${item?.height}))`, aspectRatio: `${item?.width}/${item?.height}` }}
+                >
                     {item && (
-                        <motion.img
-                            layoutId={`item-${item.id}`}
-                            src={getOriginalPath(item, selectedLibrary?.path)}
-                            className="max-w-full max-h-full object-contain shadow-2xl pointer-events-auto z-2"
-                        />
+                        <motion.div className="size-full flex justify-center items-center *:size-full" layoutId={`item-${item.id}`}>
+                            <img src={getThumbPath(item.id, selectedLibrary?.path)} className={!loaded ? "block" : "hidden"} />
+                            <img
+                                src={getOriginalPath(item, selectedLibrary?.path)}
+                                className={loaded ? "block" : "hidden"}
+                                onLoad={() => setLoaded(true)}
+                            />
+                        </motion.div>
                     )}
                 </TransformComponent>
             </TransformWrapper>
