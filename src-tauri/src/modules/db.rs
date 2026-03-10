@@ -115,8 +115,6 @@ pub fn create_library_schema(conn: &Connection) -> Result<(), String> {
         [],
     ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
-    ensure_item_search_schema(conn)?;
-
     Ok(())
 }
 

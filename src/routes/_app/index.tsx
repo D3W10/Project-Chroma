@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { IconBox } from "@/components/custom/IconBox";
 import { ItemGrid } from "@/components/custom/ItemGrid";
-import { PhotoViewer } from "@/components/custom/PhotoViewer";
+import { Toolbar, ToolbarGroup, ToolbarSearch } from "@/components/custom/Toolbar";
 import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { ImportItemsDialog } from "@/components/overlays/ImportItemsDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
@@ -19,6 +19,7 @@ import { useLibrary } from "@/lib/useLibrary";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useViewer } from "@/lib/useViewer";
+import { cn, treatDataRefresh } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/")({
     component: RouteComponent,
@@ -81,7 +82,7 @@ function RouteComponent() {
                         <Button variant="outline" size="icon" disabled={selected.length === 0} onClick={() => setAddToAlbumDialog(true)}>
                             <IconFolderPlus className="size-5" />
                         </Button>
-                        <Button variant="outline" size="icon" disabled={selected.length === 0}>
+                        <Button variant="outline" size="icon" disabled={selected.length === 0} onClick={() => setExportDialog(true)}>
                             <IconShare2 className="size-5" />
                         </Button>
                     </ButtonGroup>

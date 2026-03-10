@@ -8,7 +8,7 @@ interface Props {
 
 export function Toolbar({ children, className, shade = "separate" }: Props) {
     return (
-        <div className={cn("p-2 flex justify-between items-center gap-2 sticky top-0 left-0 right-0 z-10 *:flex-1 [&>div:first-of-type]:justify-start [&>div:last-of-type]:justify-end", className)}>
+        <div className={cn("p-2 flex justify-between items-center gap-2 sticky top-0 left-0 right-0 z-10 [&>div:first-of-type]:justify-start [&>div:last-of-type]:justify-end", className)}>
             {children}
             {shade === "full" && <ToolbarShadeFull />}
         </div>

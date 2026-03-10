@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
-import { IconArchive, IconCircleMinus, IconEyeOff, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconShare2, IconTag, IconTrash } from "@tabler/icons-react";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { IconArchive, IconCircleMinus, IconEyeOff, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconPhotoPlus, IconShare2, IconTag, IconTrash } from "@tabler/icons-react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { DeleteItemDialog } from "@/components/overlays/DeleteItemDialog";
 import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
@@ -72,6 +72,18 @@ export function ItemContextMenu<T extends Item>({ children, isAlbum = false, sel
                         <IconArchive className="size-4.5" />
                         Transfer to another library
                     </ContextMenuItem>
+                )}
+                {isAlbum && selected.length === 1 && (
+                    <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                            <IconPhotoPlus className="size-4.5" />
+                            Set as...
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                            <ContextMenuItem>Album cover</ContextMenuItem>
+                            <ContextMenuItem>Album banner</ContextMenuItem>
+                        </ContextMenuSubContent>
+                    </ContextMenuSub>
                 )}
                 <ContextMenuItem onClick={() => setTagManagementPalette(true)}>
                     <IconTag className="size-4.5" />
