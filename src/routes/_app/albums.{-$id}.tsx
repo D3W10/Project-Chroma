@@ -21,7 +21,7 @@ import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useStack } from "@/lib/useStack";
-import { cn, getThumbPath, treatDataRefresh, type Result } from "@/lib/utils";
+import { cn, getThumbPath, refreshSelectionData } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
@@ -56,10 +56,8 @@ function RouteComponent() {
     const currentAlbum = useMemo(() => {
         if (!id) return;
 
-        for (const [, data] of queryClient.getQueriesData<Result<Album[], string>>({ queryKey: [selectedLibrary?.id, "albums"] })) {
-            if (!data?.data) continue;
-
-            const found = data.data.find(a => a.id === id);
+        for (const [, data] of queryClient.getQueriesData<AlbumComp[]>({ queryKey: [selectedLibrary?.id, "albums"] })) {
+            const found = data?.find(a => a.id === id);
 
             if (found) return found;
         }
@@ -93,12 +91,12 @@ function RouteComponent() {
     }
 
     useEffect(() => {
-        treatDataRefresh(dataA?.data, setAlbums, selectedAlbums, setSelectedAlbums);
-    }, [dataA]);
+        refreshSelectionData(albums, setSelectedAlbums);
+    }, [albums]);
 
     useEffect(() => {
-        treatDataRefresh(dataI?.data, setItems, selectedItems, setSelectedItems);
-    }, [dataI]);
+        refreshSelectionData(items, setSelectedItems);
+    }, [items]);
 
     return (
         <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isFetchingAlbums && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>

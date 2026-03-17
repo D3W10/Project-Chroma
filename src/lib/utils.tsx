@@ -59,22 +59,14 @@ export function isValidColor(color: string) {
 export const pathToName = (p: string) => /[^\\/]+(?=[/|\\]?$)/g.exec(p)?.[0] || "";
 export const pathToStem = (p: string) => /([^/\\]+?)(?:\.[^.]*$|$)/g.exec(p)?.[1] || "";
 
-export function treatDataRefresh<T extends { id: string }>(raw: T[] | null | undefined, setData: (data: T[]) => unknown, selected?: T[], setSelected?: (selected: T[]) => void) {
-    const allData = raw ?? [];
-
-    setData(allData);
-
-    if (selected && setSelected) {
-        const newSelected: T[] = [];
-
-        selected.forEach(s => {
-            const newData = allData.find(p => p.id === s.id);
-            if (newData)
-                newSelected.push(newData);
-        });
-
-        setSelected(newSelected);
+export function refreshSelectionData<T extends { id: string }>(items: T[], setSelected: (a: T[] | ((prev: T[]) => T[])) => unknown) {
+    if (items.length === 0) {
+        setSelected([]);
+        return;
     }
+
+    const itemMap = new Map(items.map(item => [item.id, item]));
+    setSelected(prev => prev.map(p => itemMap.get(p.id)).filter(p => !!p));
 }
 
 export const getThumbPath = (item: string, path: string | undefined) => convertFileSrc(path + "/thumbnails/" + item + ".webp");

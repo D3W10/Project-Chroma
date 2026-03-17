@@ -1,19 +1,27 @@
 import { useEffect } from "react";
-import { createRootRouteWithContext, Outlet, useLocation } from "@tanstack/react-router";
+import { createRootRoute, Outlet, redirect } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Framebar } from "@/components/layout/framebar";
 import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { getLibraries, getSelectedLibrary, getSettings, setSelectedLibrary as setSelectedLibraryOnConfig } from "@/lib/invoker";
-import { appColors, type Library } from "@/lib/models";
+import { appColors } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
 import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSettings } from "@/lib/useSettings";
 
-export const Route = createRootRouteWithContext<{
-    selectedLibrary: Library | null;
-}>()({
+export const Route = createRootRoute({
     component: RootComponent,
-    beforeLoad: async () => ({ settings: await getSettings() }),
+    beforeLoad: async ({ location }) => {
+        const loadedSettings = await getSettings();
+        if (!loadedSettings.data?.configured && !location.pathname.startsWith("/onboarding"))
+            throw redirect({ to: "/onboarding" });
+
+        const libraries = await getLibraries();
+        if ((!libraries.data || libraries.data.length === 0) && loadedSettings.data?.configured && location.pathname !== "/onboarding/library")
+            throw redirect({ to: "/onboarding/library" });
+
+        return { libraries: libraries.data, settings: loadedSettings.data };
+    },
 });
 
 function RootComponent() {
@@ -27,16 +35,8 @@ function RootComponent() {
         pendingLibraryId,
         setPendingLibraryId,
     } = useLibrary();
-    const location = useLocation();
-    const navigate = Route.useNavigate();
-    const { settings: loadedSettings } = Route.useRouteContext();
+    const context = Route.useRouteContext();
     const { settings, updateSettings } = useSettings();
-
-    const { isFetching, data } = useQuerySafe({
-        queryKey: ["libraries"],
-        queryFn: getLibraries,
-        placeholderData: [],
-    });
 
     const { data: selectedLibraryId } = useQuerySafe({
         queryKey: ["selected-library"],
@@ -44,18 +44,17 @@ function RootComponent() {
     });
 
     useEffect(() => {
-        if (isFetching) return;
-        setLibraries(data);
-
-        if (data.length === 0 && location.pathname !== "/onboarding/library")
-            navigate({ to: "/onboarding/library" });
-    }, [isFetching]);
+        if (context.settings)
+            updateSettings(context.settings);
+        if (context.libraries)
+            setLibraries(context.libraries);
+    }, []);
 
     useEffect(() => {
-        if (!data) return;
+        if (!context.libraries) return;
 
         if (pendingLibraryId) {
-            const pendingLibrary = data.find(e => e.id === pendingLibraryId);
+            const pendingLibrary = context.libraries.find(l => l.id === pendingLibraryId);
 
             if (pendingLibrary) {
                 setSelectedLibrary(pendingLibrary);
@@ -65,17 +64,12 @@ function RootComponent() {
             }
         }
 
-        setSelectedLibrary(data.find(e => e.id === selectedLibraryId) ?? null);
-    }, [data, selectedLibraryId]);
+        setSelectedLibrary(context.libraries.find(l => l.id === selectedLibraryId) ?? null);
+    }, [selectedLibraryId]);
 
     useEffect(() => {
         setSelectedLibraryOnConfig({ libraryId: selectedLibrary?.id ?? null });
     }, [selectedLibrary]);
-
-    useEffect(() => {
-        if (loadedSettings.data)
-            updateSettings(loadedSettings.data);
-    }, [loadedSettings]);
 
     useEffect(() => {
         document.documentElement.setAttribute("data-theme", settings.theme);

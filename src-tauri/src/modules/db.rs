@@ -392,7 +392,7 @@ pub fn update_tag(conn: &Connection, tag_id: &str, name: Option<&str>, color: Op
     }
 
     if sets.is_empty() {
-        return Ok(()); 
+        return Ok(());
     }
 
     let query = format!("UPDATE tag SET {} WHERE id = ?{}", sets.join(", "), params.len() + 1);

@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 pub mod config;
-pub mod library;
 pub mod db;
+pub mod library;
 pub mod migrations;
 pub mod utils;
 

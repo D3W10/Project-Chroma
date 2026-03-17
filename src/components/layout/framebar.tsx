@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open } from "@tauri-apps/plugin-dialog";
+import { type as osType } from "@tauri-apps/plugin-os";
 import { useLocation } from "@tanstack/react-router";
-import { IconClipboardList, IconSelector, IconSettings } from "@tabler/icons-react";
+import { IconClipboardList, IconMinus, IconSelector, IconSettings, IconSquares, IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { Button } from "@/components/ui/button";
@@ -112,30 +114,45 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                             </Popover>
                         )}
                     </div>
-                    <div className="flex items-center gap-1">
-                        <Popover open={isOpen} onOpenChange={setIsOpen}>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className={"relative text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
-                                    {peekNotification ? (
-                                        <>
-                                            <Spinner />
-                                            {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <IconClipboardList className="size-5" />
-                                            {hasUnread && <div className="size-1 absolute bottom-2 right-2.5 bg-primary ring-2 ring-background rounded-full" />}
-                                        </>
-                                    )}
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                            <Popover open={isOpen} onOpenChange={setIsOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className={"relative text-muted-foreground " + (peeking ? "w-auto px-3 flex gap-2" : "")}>
+                                        {peekNotification ? (
+                                            <>
+                                                <Spinner />
+                                                {peekNotification.peek && <p className="text-sm">{peekNotification.peek}</p>}
+                                            </>
+                                        ) : (
+                                            <>
+                                                <IconClipboardList className="size-5" />
+                                                {hasUnread && <div className="size-1 absolute bottom-2 right-2.5 bg-primary ring-2 ring-background rounded-full" />}
+                                            </>
+                                        )}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent align="end" sideOffset={12} className="w-80 p-0">
+                                    <NotificationCenter />
+                                </PopoverContent>
+                            </Popover>
+                            <Button variant="ghost" size="icon" className="text-muted-foreground">
+                                <IconSettings className="size-5" />
+                            </Button>
+                        </div>
+                        {osType() !== "macos" && (
+                            <div className="flex items-center">
+                                <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => getCurrentWindow().minimize()}>
+                                    <IconMinus className="size-5" />
                                 </Button>
-                            </PopoverTrigger>
-                            <PopoverContent align="end" sideOffset={12} className="w-80 p-0">
-                                <NotificationCenter />
-                            </PopoverContent>
-                        </Popover>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground">
-                            <IconSettings className="size-5" />
-                        </Button>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => getCurrentWindow().toggleMaximize()}>
+                                    <IconSquares className="size-5" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground" onClick={() => getCurrentWindow().close()}>
+                                    <IconX className="size-5" />
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 </>
             )}

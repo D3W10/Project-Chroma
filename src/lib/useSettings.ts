@@ -8,6 +8,7 @@ interface SettingsState {
 }
 
 export const defaultSettings = {
+    configured: false,
     theme: "dark",
     accentColor: 8,
     libraryZoom: 2,

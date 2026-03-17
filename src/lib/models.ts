@@ -98,6 +98,7 @@ export interface Notification {
 export type NotificationType = "info" | "success" | "error" | "warning" | "promise";
 
 export type Settings = {
+    configured: boolean;
     theme: "dark" | "light";
     accentColor: number;
     libraryZoom: number;
