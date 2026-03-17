@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { IconBox } from "@/components/custom/IconBox";
 import { ItemGrid } from "@/components/custom/ItemGrid";
-import { Toolbar, ToolbarGroup, ToolbarSearch } from "@/components/custom/Toolbar";
+import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
 import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { ImportItemsDialog } from "@/components/overlays/ImportItemsDialog";
 import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
@@ -16,6 +16,7 @@ import { getItems } from "@/lib/invoker";
 import { gridSizes, type Item } from "@/lib/models";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useViewer } from "@/lib/useViewer";
@@ -26,14 +27,19 @@ export const Route = createFileRoute("/_app/")({
 });
 
 function RouteComponent() {
-    const [items, setItems] = useState<Item[]>([]);
     const [openAddItems, setOpenAddItems] = useState(false);
     const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
     const [exportDialog, setExportDialog] = useState(false);
     const gridParent = useRef<HTMLDivElement>(null);
     const action = useAction();
     const { selectedLibrary } = useLibrary();
-    const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items });
+    const { isFetching, data: items } = useQuerySafe({
+        queryKey: [selectedLibrary?.id, "items"],
+        queryFn: () => getItems({ libraryId: selectedLibrary?.id ?? "" }),
+        placeholderData: [],
+        enabled: !!selectedLibrary?.id,
+    });
+    const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: filteredItems });
     const { settings, updateSettings } = useSettings();
     const { viewingItem, setViewingItem } = useViewer();
 
@@ -47,7 +53,7 @@ function RouteComponent() {
     }, [data]);
 
     return (
-        <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", items.length <= 0 && "flex flex-col", (isPending || viewingItem) && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
+        <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", items.length === 0 && "flex flex-col", (isFetching || viewingItem) && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
             <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenAddItems(true)}>
@@ -90,7 +96,7 @@ function RouteComponent() {
             </Toolbar>
             <ItemGrid
                 items={items}
-                isPending={isPending}
+                isFetching={isFetching}
                 parent={gridParent}
                 selected={selected}
                 setSelected={setSelected}

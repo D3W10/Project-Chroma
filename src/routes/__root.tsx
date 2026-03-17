@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import { createRootRouteWithContext, Outlet, useLocation } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { useQuery } from "@tanstack/react-query";
 import { Framebar } from "@/components/layout/framebar";
 import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { getLibraries, getSelectedLibrary, getSettings, setSelectedLibrary as setSelectedLibraryOnConfig } from "@/lib/invoker";
 import { appColors, type Library } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSettings } from "@/lib/useSettings";
 
 export const Route = createRootRouteWithContext<{
@@ -32,28 +32,30 @@ function RootComponent() {
     const { settings: loadedSettings } = Route.useRouteContext();
     const { settings, updateSettings } = useSettings();
 
-    const { data } = useQuery({
+    const { isFetching, data } = useQuerySafe({
         queryKey: ["libraries"],
         queryFn: getLibraries,
+        placeholderData: [],
     });
 
-    const { data: dataSel } = useQuery({
+    const { data: selectedLibraryId } = useQuerySafe({
         queryKey: ["selected-library"],
         queryFn: getSelectedLibrary,
     });
 
     useEffect(() => {
-        setLibraries(data?.data ?? []);
+        if (isFetching) return;
+        setLibraries(data);
 
-        if (data?.data?.length === 0 && location.pathname !== "/onboarding/library")
+        if (data.length === 0 && location.pathname !== "/onboarding/library")
             navigate({ to: "/onboarding/library" });
-    }, [data]);
+    }, [isFetching]);
 
     useEffect(() => {
         if (!data) return;
 
         if (pendingLibraryId) {
-            const pendingLibrary = data?.data?.find(e => e.id === pendingLibraryId);
+            const pendingLibrary = data.find(e => e.id === pendingLibraryId);
 
             if (pendingLibrary) {
                 setSelectedLibrary(pendingLibrary);
@@ -63,8 +65,8 @@ function RootComponent() {
             }
         }
 
-        setSelectedLibrary(data?.data?.find(e => e.id === dataSel?.data) ?? null);
-    }, [data, dataSel]);
+        setSelectedLibrary(data.find(e => e.id === selectedLibraryId) ?? null);
+    }, [data, selectedLibraryId]);
 
     useEffect(() => {
         setSelectedLibraryOnConfig({ libraryId: selectedLibrary?.id ?? null });

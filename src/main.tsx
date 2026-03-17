@@ -16,7 +16,18 @@ const router = createRouter({
     },
 });
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            refetchOnReconnect: false,
+            staleTime: 15000,
+            gcTime: 1000 * 60 * 30,
+        },
+        mutations: {
+            retry: false,
+        },
+    },
+});
 
 declare module "@tanstack/react-router" {
     interface Register {

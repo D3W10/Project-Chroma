@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { IconAlertTriangle, IconTag, IconTagMinus, IconTagPlus } from "@tabler/icons-react";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Spinner } from "@/components/ui/spinner";
@@ -8,6 +7,7 @@ import { DeleteTagDialog } from "@/components/overlays/DeleteTagDialog";
 import { getItemTags, getTags } from "@/lib/invoker";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import type { Item, Tag } from "@/lib/models";
 
 interface TagManagementPaletteProps<T extends Item> {
@@ -27,15 +27,17 @@ export function TagManagementPalette<T extends Item>({ items, open, onOpenChange
     const { selectedLibrary } = useLibrary();
     const inputBoxRef = useRef<HTMLInputElement>(null);
 
-    const { isPending, data: tags } = useQuery({
+    const { isFetching, data: tags, error: tagsError } = useQuerySafe({
         queryKey: [selectedLibrary?.id, "tags"],
         queryFn: () => getTags({ libraryId: selectedLibrary?.id ?? "" }),
+        placeholderData: [],
     });
 
-    const { data: itemTags } = useQuery({
+    const { data: itemTags } = useQuerySafe({
         queryKey: [selectedLibrary?.id, "items", items.length > 0 ? items[0].id : "", "tags"],
         queryFn: () => getItemTags({ libraryId: selectedLibrary?.id ?? "", itemId: items.length > 0 ? items[0].id : "" }),
         enabled: items.length === 1,
+        placeholderData: [],
     });
 
     function onItemClick(tag: Tag) {
@@ -68,8 +70,7 @@ export function TagManagementPalette<T extends Item>({ items, open, onOpenChange
     }
 
     useEffect(() => {
-        if (!itemTags?.data) return;
-        setTagIds(itemTags.data.map(p => p.id));
+        setTagIds(itemTags.map(p => p.id));
     }, [itemTags]);
 
     useEffect(() => {
@@ -112,17 +113,17 @@ export function TagManagementPalette<T extends Item>({ items, open, onOpenChange
                         </CommandGroup>
                     )}
                     <CommandGroup heading="Tags">
-                        {isPending || !tags ? (
+                        {isFetching ? (
                             <CommandItem disabled>
                                 <Spinner />
                                 <span>Loading tags</span>
                             </CommandItem>
-                        ) : !tags.data ? (
+                        ) : tagsError ? (
                             <CommandItem disabled>
                                 <IconAlertTriangle />
                                 <span>Unable to load tags</span>
                             </CommandItem>
-                        ) : tags.data.map(t => (
+                        ) : tags.map(t => (
                             <CommandItem key={t.name} className="h-8 py-1" data-checked={!commandPages.length && tagIds.includes(t.id)} onSelect={() => onItemClick(t)}>
                                 <div className="size-3 m-0.5 rounded-full" style={{ backgroundColor: t.color }} />
                                 <span className="flex-1">{t.name}</span>

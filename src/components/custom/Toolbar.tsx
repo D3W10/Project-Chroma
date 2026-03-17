@@ -23,7 +23,7 @@ interface GroupProps {
 
 export function ToolbarGroup({ children, className, shade }: GroupProps) {
     return (
-        <div className={cn("flex justify-center gap-2 relative", className)}>
+        <div className={cn("flex justify-center gap-2 flex-1 relative", className)}>
             {children}
             {shade === "left" && <ToolbarShadeLeft />}
             {shade === "right" && <ToolbarShadeRight />}

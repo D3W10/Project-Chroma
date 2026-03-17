@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { IconArrowAutofitHeight, IconChevronLeft, IconFilter2, IconFolderPlus, IconInfoCircle, IconMinus, IconPencil, IconPlus, IconShare2 } from "@tabler/icons-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { animate } from "@/components/animated";
@@ -17,6 +17,7 @@ import { getAlbumItems, getAlbums } from "@/lib/invoker";
 import { gridSizes, type Album, type AlbumComp, type ItemAlbumRef } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSelection } from "@/lib/useSelection";
 import { useSettings } from "@/lib/useSettings";
 import { useStack } from "@/lib/useStack";
@@ -27,14 +28,23 @@ export const Route = createFileRoute("/_app/albums/{-$id}")({
 });
 
 function RouteComponent() {
-    const [albums, setAlbums] = useState<AlbumComp[]>([]);
-    const [items, setItems] = useState<ItemAlbumRef[]>([]);
     const [openCreateAlbum, setOpenCreateAlbum] = useState(false);
     const { selectedLibrary } = useLibrary();
     const navigate = useNavigate();
     const { pushNoti } = useNotifications();
     const { id } = Route.useParams();
     const queryClient = useQueryClient();
+    const { isFetching: isFetchingAlbums, data: albums } = useQuerySafe({
+        queryKey: [selectedLibrary?.id, "albums", id],
+        queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
+        placeholderData: [],
+    });
+    const { isFetching: isFetchingItems, data: items } = useQuerySafe({
+        queryKey: [selectedLibrary?.id, "albums", id, "items"],
+        queryFn: () => getAlbumItems({ libraryId: selectedLibrary?.id ?? "", albumId: id ?? "" }),
+        placeholderData: [],
+        enabled: !!id,
+    });
     const gridParent = useRef<HTMLDivElement>(null);
     const { scrollY } = useScroll({ container: gridParent });
     const { selected: selectedAlbums, setSelected: setSelectedAlbums, handleSelect: handleSelectAlbumRef, handleRightClick: handleRightClickAlbum, unselectAll: unselectAllAlbums } = useSelection({ items: albums });
@@ -56,17 +66,6 @@ function RouteComponent() {
 
         return;
     }, [selectedLibrary?.id, id]);
-
-    const { isPending: isPendingA, data: dataA } = useQuery({
-        queryKey: [selectedLibrary?.id, "albums", id],
-        queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: id }),
-    });
-
-    const { isPending: isPendingI, data: dataI } = useQuery({
-        queryKey: [selectedLibrary?.id, "albums", id, "items"],
-        queryFn: () => getAlbumItems({ libraryId: selectedLibrary?.id ?? "", albumId: id ?? "" }),
-        enabled: !!id,
-    });
 
     const handleSelectAlbum = (event: React.MouseEvent, index: number, item: AlbumComp) => {
         unselectAllItems();
@@ -102,7 +101,7 @@ function RouteComponent() {
     }, [dataI]);
 
     return (
-        <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isPendingA && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
+        <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isFetchingAlbums && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
             <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenCreateAlbum(true)}>
@@ -163,7 +162,7 @@ function RouteComponent() {
                 )}
                 {items.length === 0 ? (
                     <div className={cn("z-1", albums.length > 0 ? "px-4 pt-1 pb-4 grid gap-4 grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" : "flex flex-col flex-1 absolute inset-0")}>
-                        {isPendingA ? (
+                        {isFetchingAlbums ? (
                             <GridLoading />
                         ) : albums.length > 0 ? (
                             albums.map((album, i) => (
@@ -202,7 +201,7 @@ function RouteComponent() {
                     <div className="px-2 flex-1 min-h-0 z-1">
                         <ItemGrid
                             items={items}
-                            isPending={isPendingI}
+                            isFetching={isFetchingItems}
                             parent={gridParent}
                             isAlbum={true}
                             selected={selectedItems}

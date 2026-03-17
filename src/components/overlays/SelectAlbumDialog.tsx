@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlbumCover } from "@/components/custom/AlbumCover";
 import { getAlbums } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useStack } from "@/lib/useStack";
 import { cn } from "@/lib/utils";
 import type { Album } from "@/lib/models";
@@ -22,12 +22,11 @@ export function SelectAlbumDialog({ open, onOpenChange, onSuccess }: SelectAlbum
     const navStack = useStack<Album | undefined>();
     const { selectedLibrary } = useLibrary();
 
-    const { isPending, data: albums } = useQuery({
+    const { isFetching, data: albums } = useQuerySafe({
         queryKey: [selectedLibrary?.id, "albums", currentAlbum],
         queryFn: () => getAlbums({ libraryId: selectedLibrary?.id ?? "", parent: currentAlbum?.id }),
+        placeholderData: [],
     });
-
-    const hasAlbums = !isPending && albums?.data && albums.data.length > 0;
 
     function navigateToAlbum(album: Album) {
         navStack.push(currentAlbum);
@@ -68,20 +67,21 @@ export function SelectAlbumDialog({ open, onOpenChange, onSuccess }: SelectAlbum
                             <p className="text-xs text-muted-foreground">Go back</p>
                         </Button>
                     )}
-                    {isPending && Array(3).fill(null).map((_, i) => (
-                        <div key={i} className="w-full h-14 bg-foreground/5 border-b border-input/30 animate-pulse delay-(--loading-delay)" style={{ "--loading-delay": `${i * 0.2}s` } as React.CSSProperties}></div>
-                    ))}
-                    {hasAlbums ? albums.data.map(p => (
-                        <Button key={p.id} variant="ghost" className={cn("w-full h-fit p-3 flex justify-between items-center border-0 border-b border-input/30 rounded-none first:rounded-t-xl transition-shadow", (!currentAlbum && albums.data.length > 4 || currentAlbum && albums.data.length > 3) && "last:rounded-b-xl", selected && p.id === selected.id && "inset-ring-2 inset-ring-primary")} onClick={() => setSelected(p)} onDoubleClick={() => navigateToAlbum(p)}>
-                            <div className="flex items-center gap-3">
-                                <AlbumCover item={p} size="md" />
-                                <p className="text-secondary-foreground font-medium">{p.name}</p>
-                            </div>
-                            <IconChevronRight className="size-4.5 mr-1 text-muted-foreground" />
-                        </Button>
-                    )) : (
-                        <p className="size-full flex items-center justify-center text-muted-foreground font-medium">No albums in here</p>
-                    )}
+                    {isFetching ? (
+                        Array(3).fill(null).map((_, i) => (
+                            <div key={i} className="w-full h-14 bg-foreground/5 border-b border-input/30 animate-pulse delay-(--loading-delay)" style={{ "--loading-delay": `${i * 0.2}s` } as React.CSSProperties}></div>
+                        ))
+                    ) : albums.length !== 0 ? (
+                        albums.map(p => (
+                            <Button key={p.id} variant="ghost" className={cn("w-full h-fit p-3 flex justify-between items-center border-0 border-b border-input/30 rounded-none first:rounded-t-xl transition-shadow", (!currentAlbum && albums.length > 4 || currentAlbum && albums.length > 3) && "last:rounded-b-xl", selected && p.id === selected.id && "inset-ring-2 inset-ring-primary")} onClick={() => setSelected(p)} onDoubleClick={() => navigateToAlbum(p)}>
+                                <div className="flex items-center gap-3">
+                                    <AlbumCover item={p} size="md" />
+                                    <p className="text-secondary-foreground font-medium">{p.name}</p>
+                                </div>
+                                <IconChevronRight className="size-4.5 mr-1 text-muted-foreground" />
+                            </Button>
+                        ))
+                    ) : <p className="size-full flex items-center justify-center text-muted-foreground font-medium">No albums in here</p>}
                 </div>
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

@@ -58,7 +58,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90 ring-foreground/10 flex flex-col max-w-[calc(100%-2rem)] gap-6 rounded-xl p-6 text-sm ring-1 duration-300 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2",
+          "bg-background shadow-2xl data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-90 data-[state=open]:zoom-in-90 ring-foreground/10 flex flex-col max-w-[calc(100%-2rem)] gap-6 rounded-2xl p-6 text-sm ring-1 duration-300 sm:max-w-lg fixed top-1/2 left-1/2 z-50 w-full -translate-x-1/2 -translate-y-1/2",
           className
         )}
         onInteractOutside={e => e.target instanceof HTMLElement && e.target.id === "dialogDragRegion" && e.preventDefault()}

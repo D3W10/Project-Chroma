@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { IconCircleArrowUp, IconExclamationCircle, IconLayoutGrid } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { checkLibraryHealth, removeLibrary, updateLibraryPath, upgradeLibrary } 
 import { useLibrary } from "@/lib/useLibrary";
 import { useMigration } from "@/lib/useMigration";
 import { useNotifications } from "@/lib/useNotifications";
+import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useViewer } from "@/lib/useViewer";
 import { cn } from "@/lib/utils";
 
@@ -25,16 +26,14 @@ function RouteComponent() {
     const { migrating, setMigrating } = useMigration();
     const { pushNoti } = useNotifications();
     const queryClient = useQueryClient();
-    const { viewingItem, setViewingItem } = useViewer();
-
-    const { isPending, data: libraryExists } = useQuery({
+    const { isFetching, data: libraryExists, error: libraryError } = useQuerySafe({
         queryKey: [selectedLibrary?.id, "library-health"],
         queryFn: () => checkLibraryHealth({ libraryId: selectedLibrary?.id ?? "" }),
         enabled: !!selectedLibrary?.id,
-        retry: false,
     });
+    const { viewingItem, setViewingItem } = useViewer();
 
-    const successLoaded = Boolean(!isPending && libraryExists?.data);
+    const successLoaded = Boolean(!isFetching && libraryExists);
 
     async function selectNewLocation() {
         const picked = await open({ directory: true });
@@ -84,7 +83,7 @@ function RouteComponent() {
                 {successLoaded && selectedLibrary ? (
                     <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
-                    libraryExists?.error === "notfound" ? (
+                    libraryError?.message === "notfound" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconExclamationCircle />
@@ -101,7 +100,7 @@ function RouteComponent() {
                                 <Button variant="destructive" onClick={handleRemoveLibrary}>Remove library</Button>
                             </animate.div>
                         </CenterLayout>
-                    ) : libraryExists?.error === "outdated" ? (
+                    ) : libraryError?.message === "outdated" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconCircleArrowUp />
@@ -118,7 +117,7 @@ function RouteComponent() {
                                 </Button>
                             </animate.div>
                         </CenterLayout>
-                    ) : libraryExists?.error === "recent" ? (
+                    ) : libraryError?.message === "recent" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconExclamationCircle />

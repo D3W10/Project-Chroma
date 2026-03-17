@@ -11,7 +11,7 @@ import { cn, getThumbPath, pathToStem } from "@/lib/utils";
 
 interface ItemGridProps<T extends Item> {
     items: T[];
-    isPending: boolean;
+    isFetching: boolean;
     parent: React.RefObject<HTMLElement | null>;
     isAlbum?: boolean;
     selected: T[];
@@ -23,7 +23,7 @@ interface ItemGridProps<T extends Item> {
     empty: React.ReactNode;
 }
 
-export function ItemGrid<T extends Item>({ items, isPending, parent, isAlbum, selected, setSelected, viewingItem, setViewingItem, handleSelect, handleRightClick, empty }: ItemGridProps<T>) {
+export function ItemGrid<T extends Item>({ items, isFetching, parent, isAlbum, selected, setSelected, viewingItem, setViewingItem, handleSelect, handleRightClick, empty }: ItemGridProps<T>) {
     const [lastViewingItem, setLastViewingItem] = useState(viewingItem);
     const { settings } = useSettings();
     const columns = gridSizesNum[settings.libraryZoom];
@@ -44,12 +44,12 @@ export function ItemGrid<T extends Item>({ items, isPending, parent, isAlbum, se
 
     return (
         <div
-            className={cn("w-full relative", !isPending && items.length === 0 && "flex justify-center items-center flex-1")}
+            className={cn("w-full relative", !isFetching && items.length === 0 && "flex justify-center items-center flex-1")}
             style={{
                 height: items.length > 0 ? virtualizer.getTotalSize() + 16 : undefined,
             }}
         >
-            {isPending && (
+            {isFetching ? (
                 Array(6).fill(null).map((_, i) => (
                     <div key={i} className={cn("w-full mb-1 last:mb-0 grid px-2 gap-1", gridSizes[settings.libraryZoom])}>
                         {Array(gridSizesNum[settings.libraryZoom]).fill(null).map((_, j) => (
@@ -57,47 +57,45 @@ export function ItemGrid<T extends Item>({ items, isPending, parent, isAlbum, se
                         ))}
                     </div>
                 ))
-            )}
-            {!isPending && items.length === 0 && empty}
-            {items.length > 0 && virtualizer.getVirtualItems().map(row => {
-                const rowStart = row.index * columns;
-                const rowItems = items.slice(rowStart, rowStart + columns);
+            ) : items.length > 0 ? (
+                virtualizer.getVirtualItems().map(row => {
+                    const rowStart = row.index * columns;
+                    const rowItems = items.slice(rowStart, rowStart + columns);
 
-                return (
-                    <div
-                        key={row.key}
-                        ref={virtualizer.measureElement}
-                        data-index={row.index}
-                        className={cn("w-full grid absolute top-0 left-0 px-2 gap-1 has-[*_div[data-viewing='true']]:z-1", gridSizes[settings.libraryZoom])}
-                        style={{
-                            transform: `translateY(${row.start}px)`,
-                        }}
-                    >
-                        {rowItems.map((item, i) => {
-                            const actualIndex = rowStart + i;
-                            return (
-                                <ItemContextMenu
-                                    key={item.id}
-                                    isAlbum={isAlbum}
-                                    selected={selected}
-                                    setSelected={setSelected}
-                                >
-                                    <GridItem
-                                        item={item}
-                                        expanded={settings.libraryExpanded}
-                                        selected={!!selected.find(s => s.id === item.id)}
-                                        viewingItem={viewingItem}
-                                        lastViewingItem={lastViewingItem}
-                                        onClick={e => handleSelect(e, actualIndex, item)}
-                                        onDoubleClick={() => setViewingItem(item)}
-                                        onContextMenu={() => handleRightClick(actualIndex, item)}
-                                    />
-                                </ItemContextMenu>
-                            );
-                        })}
-                    </div>
-                );
-            })}
+                    return (
+                        <div
+                            key={row.key}
+                            ref={virtualizer.measureElement}
+                            data-index={row.index}
+                            className={cn("w-full grid absolute top-0 left-0 px-2 gap-1 has-[*_div[data-viewing='true']]:z-1", gridSizes[settings.libraryZoom])}
+                            style={{ transform: `translateY(${row.start}px)` }}
+                        >
+                            {rowItems.map((item, i) => {
+                                const actualIndex = rowStart + i;
+                                return (
+                                    <ItemContextMenu
+                                        key={item.id}
+                                        isAlbum={isAlbum}
+                                        selected={selected}
+                                        setSelected={setSelected}
+                                    >
+                                        <GridItem
+                                            item={item}
+                                            expanded={settings.libraryExpanded}
+                                            selected={!!selected.find(s => s.id === item.id)}
+                                            viewingItem={viewingItem}
+                                            lastViewingItem={lastViewingItem}
+                                            onClick={e => handleSelect(e, actualIndex, item)}
+                                            onDoubleClick={() => setViewingItem(item)}
+                                            onContextMenu={() => handleRightClick(actualIndex, item)}
+                                        />
+                                    </ItemContextMenu>
+                                );
+                            })}
+                        </div>
+                    );
+                })
+            ) : empty}
         </div>
     );
 }

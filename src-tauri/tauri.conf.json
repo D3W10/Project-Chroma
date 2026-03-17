@@ -21,12 +21,8 @@
                 "resizable": true,
                 "fullscreen": false,
                 "hiddenTitle": true,
-                "decorations": true,
-                "zoomHotkeysEnabled": false,
-                "trafficLightPosition": {
-                    "x": 18.0,
-                    "y": 25.0
-                }
+                "decorations": false,
+                "zoomHotkeysEnabled": false
             }
         ],
         "security": {

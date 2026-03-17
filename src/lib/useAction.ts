@@ -206,12 +206,12 @@ export function useAction() {
         setItemsFavorite,
         transferItems,
         deleteItems,
+        exportItems,
         createAlbum,
         addItemsToAlbum,
         createTag,
         updateTag,
         deleteTags,
-        exportItems,
         addTagsToItems,
         removeTagsFromItems,
     };
