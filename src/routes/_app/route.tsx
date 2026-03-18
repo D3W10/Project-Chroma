@@ -9,7 +9,8 @@ import { IconBox } from "@/components/custom/IconBox";
 import { PhotoViewer } from "@/components/custom/PhotoViewer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CenterLayout } from "@/components/layout/centerLayout";
-import { checkLibraryHealth, removeLibrary, updateLibraryPath, upgradeLibrary } from "@/lib/invoker";
+import { checkLibraryHealth, updateLibraryPath, upgradeLibrary } from "@/lib/invoker";
+import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useMigration } from "@/lib/useMigration";
 import { useNotifications } from "@/lib/useNotifications";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/_app")({
 
 function RouteComponent() {
     const { libraries, selectedLibrary, setOpenCreateLibrary, setPendingLibraryId } = useLibrary();
+    const action = useAction();
     const { migrating, setMigrating } = useMigration();
     const { pushNoti } = useNotifications();
     const queryClient = useQueryClient();
@@ -32,7 +34,6 @@ function RouteComponent() {
         enabled: !!selectedLibrary?.id,
     });
     const { viewingItem, setViewingItem } = useViewer();
-
     const successLoaded = Boolean(!isFetching && libraryExists);
 
     async function selectNewLocation() {
@@ -65,15 +66,13 @@ function RouteComponent() {
     }
 
     async function handleRemoveLibrary() {
-        if (selectedLibrary) {
-            const idx = libraries.findIndex(lib => lib.id === selectedLibrary.id);
-            const rest = libraries.filter(lib => lib.id !== selectedLibrary.id);
+        if (!selectedLibrary) return;
 
-            await removeLibrary({ libraryId: selectedLibrary.id });
+        const idx = libraries.findIndex(lib => lib.id === selectedLibrary.id);
+        const rest = libraries.filter(lib => lib.id !== selectedLibrary.id);
 
-            setPendingLibraryId(rest.length >= idx + 1 ? rest[idx].id : (rest.length > 0 ? rest[idx - 1].id : null));
-            queryClient.invalidateQueries({ queryKey: ["libraries"] });
-        }
+        await action.removeLibrary();
+        setPendingLibraryId(rest.length >= idx + 1 ? rest[idx].id : (rest.length > 0 ? rest[idx - 1].id : null));
     }
 
     return (
@@ -83,7 +82,7 @@ function RouteComponent() {
                 {successLoaded && selectedLibrary ? (
                     <Outlet key={selectedLibrary.id} />
                 ) : selectedLibrary ? (
-                    libraryError?.message === "notfound" ? (
+                    libraryError === "notfound" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconExclamationCircle />
@@ -100,7 +99,7 @@ function RouteComponent() {
                                 <Button variant="destructive" onClick={handleRemoveLibrary}>Remove library</Button>
                             </animate.div>
                         </CenterLayout>
-                    ) : libraryError?.message === "outdated" ? (
+                    ) : libraryError === "outdated" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconCircleArrowUp />
@@ -117,7 +116,7 @@ function RouteComponent() {
                                 </Button>
                             </animate.div>
                         </CenterLayout>
-                    ) : libraryError?.message === "recent" ? (
+                    ) : libraryError === "recent" ? (
                         <CenterLayout key={selectedLibrary.id}>
                             <IconBox className="mb-4">
                                 <IconExclamationCircle />

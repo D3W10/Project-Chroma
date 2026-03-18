@@ -19,7 +19,6 @@ const router = createRouter({
 const queryClient = new QueryClient({
     defaultOptions: {
         queries: {
-            refetchOnWindowFocus: false,
             refetchOnReconnect: false,
             staleTime: 15000,
             gcTime: 1000 * 60 * 30,

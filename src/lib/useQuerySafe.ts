@@ -6,10 +6,10 @@ export type UseQuerySafeOptions<
     TError = Error,
     TQueryKey extends QueryKey = QueryKey,
 > = Omit<
-    UseQueryOptions<Result<T, unknown>, TError, T, TQueryKey>,
+    UseQueryOptions<Result<T, TError>, TError, T, TQueryKey>,
     "queryFn" | "placeholderData"
 > & {
-    queryFn: QueryFunction<Result<T, unknown>, TQueryKey>;
+    queryFn: QueryFunction<Result<T, TError>, TQueryKey>;
     placeholderData?: T;
 };
 
@@ -28,6 +28,6 @@ export function useQuerySafe<T, TError = Error, TQueryKey extends QueryKey = Que
     return useQuery({
         ...rest,
         placeholderData,
-        queryFn: context => unwrapResult(queryFn(context) as Promise<Result<T, unknown>>),
+        queryFn: context => unwrapResult(queryFn(context) as Promise<Result<T, TError>>),
     } as UseQueryOptions<T, TError, T, TQueryKey>) as UseQueryResult<T, TError>;
 }
