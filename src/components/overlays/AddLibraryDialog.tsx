@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
@@ -10,26 +9,24 @@ import { useNotifications } from "@/lib/useNotifications";
 import type { LibraryDetailsPath } from "@/lib/models";
 
 interface AddLibraryDialogProps {
-    library?: LibraryDetailsPath;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    library?: LibraryDetailsPath;
 }
 
 export function AddLibraryDialog({ library, open, onOpenChange }: AddLibraryDialogProps) {
     const [isProcessing, setIsProcessing] = useState(false);
-    const { setPendingLibraryId } = useLibrary();
+    const { selectLibraryById } = useLibrary();
     const { pushNoti } = useNotifications();
-    const queryClient = useQueryClient();
 
     async function handleAdd() {
         if (!library) return;
 
         setIsProcessing(true);
 
-        const { data } = await addLibrary({ path: library.path });
-        if (data) {
-            setPendingLibraryId(data.id);
-            queryClient.invalidateQueries({ queryKey: ["libraries"] });
+        const { ok, data } = await addLibrary({ path: library.path });
+        if (ok) {
+            await selectLibraryById(data.id);
             pushNoti("Library added", "The library \"" + library.name + "\" was added successfully!", "success");
             onOpenChange(false);
         } else

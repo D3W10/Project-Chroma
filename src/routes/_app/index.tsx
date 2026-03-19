@@ -57,10 +57,10 @@ function RouteComponent() {
             <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenAddItems(true)}>
-                        <IconPlus className="size-4 mr-0.5" />
+                        <IconPlus className="size-4 mr-0.5" data-icon="inline-start" />
                         Import items
                     </Button>
-                    <ImportItemsDialog openDialog={openAddItems} onOpenChange={setOpenAddItems} />
+                    <ImportItemsDialog open={openAddItems} onOpenChange={setOpenAddItems} />
                     <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum(selected.map(p => p.id), a)} />
                     <ExportDialog open={exportDialog} onOpenChange={setExportDialog} items={selected} />
                 </ToolbarGroup>

@@ -12,28 +12,27 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Spinner } from "@/components/ui/spinner";
 import { IconColor } from "@/components/custom/IconColor";
 import { AddLibraryDialog } from "@/components/overlays/AddLibraryDialog";
+import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { getLibraryInfoFromPath } from "@/lib/invoker";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { cn } from "@/lib/utils";
-import type { Library, LibraryDetailsPath, Notification } from "@/lib/models";
+import type { Library, LibraryDetailsPath } from "@/lib/models";
 
 export function Framebar({ libraries }: { libraries: Library[] }) {
     const [isLibraryPanelOpen, setIsLibraryPanelOpen] = useState(false);
-    const [peekNotification, setPeekNotification] = useState<Notification | null>(null);
+    const [openCreateLibrary, setOpenCreateLibrary] = useState(false);
     const [openAddLibrary, setOpenAddLibrary] = useState(false);
     const [libraryToAdd, setLibraryToAdd] = useState<LibraryDetailsPath>();
-    const { selectedLibrary, setSelectedLibrary, setOpenCreateLibrary } = useLibrary();
+    const { selectedLibrary, selectLibraryById } = useLibrary();
     const { notifications, isOpen, hasUnread, pushNoti, setIsOpen } = useNotifications();
     const location = useLocation();
 
+    const peekNotification = notifications.find(n => n.type === "promise") ?? null;
     const peeking = peekNotification !== null && !!peekNotification.peek;
 
     const handleLibrarySelect = (libraryId: string) => {
-        const newLibrary = libraries.find(lib => lib.id === libraryId);
-        if (newLibrary && newLibrary.id !== selectedLibrary?.id)
-            setSelectedLibrary(newLibrary);
-
+        selectLibraryById(libraryId);
         setIsLibraryPanelOpen(false);
     };
 
@@ -65,10 +64,6 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
             pushNoti("System failure", "Unable to open the system file open dialog", "error");
         }
     }
-
-    useEffect(() => {
-        setPeekNotification(notifications.find(n => n.type === "promise") || null);
-    }, [notifications]);
 
     useEffect(() => {
         toast.dismiss();
@@ -156,6 +151,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                     </div>
                 </>
             )}
+            <CreateLibraryDialog open={openCreateLibrary} onOpenChange={setOpenCreateLibrary} />
             <AddLibraryDialog library={libraryToAdd} open={openAddLibrary} onOpenChange={setOpenAddLibrary} />
         </div>
     );

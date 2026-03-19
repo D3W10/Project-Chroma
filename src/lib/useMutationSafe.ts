@@ -7,7 +7,7 @@ export type UseMutationSafeOptions<
     TVariables = void,
     TContext = unknown,
 > = Omit<
-    UseMutationOptions<Result<T, TError>, TError, TVariables, TContext>,
+    UseMutationOptions<T, TError, TVariables, TContext>,
     "mutationFn"
 > & {
     mutationFn: MutationFunction<Result<T, TError>, TVariables>;
@@ -24,6 +24,6 @@ export function useMutationSafe<
     const { mutationFn, ...rest } = options;
     return useMutation({
         ...rest,
-        mutationFn: (variables, context) => unwrapResult(mutationFn(variables, context) as Promise<Result<T, TError>>),
+        mutationFn: (variables, context) => unwrapResult(mutationFn(variables, context)),
     } as UseMutationOptions<T, TError, TVariables, TContext>) as UseMutationResult<T, TError, TVariables, TContext>;
 }

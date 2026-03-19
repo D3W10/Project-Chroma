@@ -11,9 +11,9 @@ import { useQuerySafe } from "@/lib/useQuerySafe";
 import type { Item, Tag } from "@/lib/models";
 
 interface TagManagementPaletteProps<T extends Item> {
-    items: T[];
     open: boolean;
     onOpenChange: (open: boolean) => unknown;
+    items: T[];
 }
 
 export function TagManagementPalette<T extends Item>({ items, open, onOpenChange }: TagManagementPaletteProps<T>) {

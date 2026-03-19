@@ -2,8 +2,7 @@ import { useEffect } from "react";
 import { createRootRoute, Outlet, redirect } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { Framebar } from "@/components/layout/framebar";
-import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
-import { getLibraries, getSelectedLibrary, getSettings, setSelectedLibrary as setSelectedLibraryOnConfig } from "@/lib/invoker";
+import { getLibraries, getSelectedLibrary, getSettings, setSelectedLibrary } from "@/lib/invoker";
 import { appColors } from "@/lib/models";
 import { useLibrary } from "@/lib/useLibrary";
 import { useQuerySafe } from "@/lib/useQuerySafe";
@@ -29,11 +28,7 @@ function RootComponent() {
         libraries,
         setLibraries,
         selectedLibrary,
-        setSelectedLibrary,
-        openCreateLibrary,
-        setOpenCreateLibrary,
-        pendingLibraryId,
-        setPendingLibraryId,
+        selectLibraryById,
     } = useLibrary();
     const context = Route.useRouteContext();
     const { settings, updateSettings } = useSettings();
@@ -41,6 +36,7 @@ function RootComponent() {
     const { data: selectedLibraryId } = useQuerySafe({
         queryKey: ["selected-library"],
         queryFn: getSelectedLibrary,
+        placeholderData: null,
     });
 
     useEffect(() => {
@@ -52,23 +48,11 @@ function RootComponent() {
 
     useEffect(() => {
         if (!context.libraries) return;
-
-        if (pendingLibraryId) {
-            const pendingLibrary = context.libraries.find(l => l.id === pendingLibraryId);
-
-            if (pendingLibrary) {
-                setSelectedLibrary(pendingLibrary);
-                setPendingLibraryId(null);
-                setOpenCreateLibrary(false);
-                return;
-            }
-        }
-
-        setSelectedLibrary(context.libraries.find(l => l.id === selectedLibraryId) ?? null);
+        selectLibraryById(selectedLibraryId);
     }, [selectedLibraryId]);
 
     useEffect(() => {
-        setSelectedLibraryOnConfig({ libraryId: selectedLibrary?.id ?? null });
+        setSelectedLibrary({ libraryId: selectedLibrary?.id ?? null });
     }, [selectedLibrary]);
 
     useEffect(() => {
@@ -81,7 +65,6 @@ function RootComponent() {
             <Framebar libraries={libraries} />
             <Outlet />
             <TanStackRouterDevtools />
-            <CreateLibraryDialog open={openCreateLibrary} onOpenChange={setOpenCreateLibrary} />
         </>
     );
 }

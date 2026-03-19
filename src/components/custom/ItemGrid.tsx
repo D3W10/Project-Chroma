@@ -7,7 +7,7 @@ import { gridSizes, gridSizesNum, type Item } from "@/lib/models";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSettings } from "@/lib/useSettings";
-import { cn, getThumbPath, pathToStem } from "@/lib/utils";
+import { cn, getThumbPath, pathToStem, QUICK_EASE } from "@/lib/utils";
 
 interface ItemGridProps<T extends Item> {
     items: T[];
@@ -124,6 +124,7 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
     }
 
     const isHorizontal = item.width > item.height;
+    const isViewing = viewingItem?.id === item.id;
     const stem = pathToStem(item.original_name);
 
     return (
@@ -143,13 +144,14 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
                 onContextMenu={onContextMenu}
             >
                 {!error ? (
-                    viewingItem?.id !== item.id ? (
+                    !isViewing ? (
                         <motion.img
                             layout
                             layoutId={`item-${item.id}`}
                             src={getThumbPath(item.id, selectedLibrary?.path)}
                             className={cn("size-full rounded-sm object-cover pointer-events-none", selected && "z-1")}
                             loading="lazy"
+                            transition={{ duration: 0.6, ease: QUICK_EASE }}
                             onError={() => setError(true)}
                         />
                     ) : undefined
@@ -165,14 +167,14 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
                         "flex absolute text-white drop-shadow-favorite transform-gpu transition-opacity z-1 *:transition-opacity",
                         !item.is_favorite ? "opacity-0 group-hover:opacity-100" : "",
                         !expanded ? "bottom-1 left-1" : "bottom-1.5 left-1.5",
-                        !viewingItem ? "*:delay-500" : "*:opacity-0",
+                        !isViewing ? "*:delay-500" : "*:opacity-0",
                     )}
                     onClick={setItemFavorite}
                 >
                     {!item.is_favorite ? <IconHeart className="size-3.5" /> : <IconHeartFilled className="size-3.5" />}
                 </button>
                 {type === "video" && (
-                    <div className={cn("px-1 py-0.5 absolute bottom-0 right-0 bg-black/50 rounded-tl-sm backdrop-blur-md text-[10px] text-white font-medium pointer-events-none z-1", !expanded || selected ? "rounded-br-sm" : "rounded-br-xs")}>
+                    <div className={cn("px-1 py-0.5 absolute bottom-0 right-0 bg-black/50 rounded-tl-sm backdrop-blur-md text-[10px] text-white font-medium pointer-events-none transition-opacity z-1", !expanded || selected ? "rounded-br-sm" : "rounded-br-xs", !isViewing ? "delay-500" : "opacity-0")}>
                         {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, "0")}
                     </div>
                 )}

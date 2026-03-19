@@ -7,8 +7,8 @@ import { Spinner } from "@/components/ui/spinner";
 import type { Easing } from "motion/react";
 import type { Item, Notification } from "@/lib/models";
 
-type Success<T> = { data: T; error: null };
-type Failure<E> = { data: null; error: E };
+type Success<T> = { ok: true; data: T; error: null };
+type Failure<E> = { ok: false; data: null; error: E };
 export type Result<T, E = string> = Success<T> | Failure<E>;
 
 export const QUICK_EASE: Easing = [0.22, 1, 0.36, 1];
@@ -21,15 +21,15 @@ export const cva = cvaOriginal;
 
 export async function tryCatch<T, E = string>(fn: () => Promise<T>): Promise<Result<T, E>> {
     try {
-        return { data: await fn(), error: null };
+        return { ok: true, data: await fn(), error: null };
     } catch (err) {
-        return { data: null, error: err as E };
+        return { ok: false, data: null, error: err as E };
     }
 }
 
 export function unwrapResult<T, E = string>(result: Promise<Result<T, E>>): Promise<T> {
-    return new Promise((resolve, reject) => result.then(e => {
-        if (e.data)
+    return new Promise<T>((resolve, reject) => result.then(e => {
+        if (e.ok)
             resolve(e.data);
         else
             reject(e.error);

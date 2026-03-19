@@ -9,7 +9,7 @@ import { SelectAlbumDialog } from "@/components/overlays/SelectAlbumDialog";
 import { ExportDialog } from "@/components/overlays/ExportDialog";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
-import { cn, getOriginalPath, getThumbPath } from "@/lib/utils";
+import { cn, getOriginalPath, getThumbPath, QUICK_EASE } from "@/lib/utils";
 import type { Item } from "@/lib/models";
 
 interface PhotoViewerProps {
@@ -43,12 +43,12 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
     return (
         <div className={cn("flex flex-col absolute inset-0 z-50 transition-colors duration-200", !item ? "bg-transparent pointer-events-none" : "bg-background")}>
             <TransformWrapper centerOnInit disablePadding>
-                <Toolbar className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
-                    <ToolbarGroup shade="left">
+                <Toolbar shade="full" className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
+                    <ToolbarGroup>
                         <ReturnButton setItem={setItem} />
                         {item?.live_video && (
-                            <Button variant="outline" className="pl-2 pr-2.5 gap-x-2">
-                                <IconLivePhoto className="size-5" />
+                            <Button variant="outline">
+                                <IconLivePhoto className="size-5" data-icon="inline-start" />
                                 <span className="uppercase">Live</span>
                             </Button>
                         )}
@@ -59,7 +59,7 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                             </>
                         )}
                     </ToolbarGroup>
-                    <ToolbarGroup shade="right">
+                    <ToolbarGroup>
                         <ZoomControls />
                         <ButtonGroup>
                             <Button variant="outline" size="icon" onClick={setAsFavorite}>
@@ -89,7 +89,11 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
                     contentStyle={{ width: `min(100cqw, 100cqh * (${item?.width}/${item?.height}))`, aspectRatio: `${item?.width}/${item?.height}` }}
                 >
                     {item && (
-                        <motion.div className="size-full flex justify-center items-center *:size-full" layoutId={`item-${item.id}`}>
+                        <motion.div
+                            className="size-full flex justify-center items-center *:size-full"
+                            layoutId={`item-${item.id}`}
+                            transition={{ duration: 0.6, ease: QUICK_EASE }}
+                        >
                             <img src={getThumbPath(item.id, selectedLibrary?.path)} className={!loaded ? "block" : "hidden"} />
                             <img
                                 src={getOriginalPath(item, selectedLibrary?.path)}

@@ -103,7 +103,7 @@ function RouteComponent() {
             <Toolbar shade="full">
                 <ToolbarGroup>
                     <Button onClick={() => setOpenCreateAlbum(true)}>
-                        <IconFolderPlus className="size-4 mr-0.5" />
+                        <IconFolderPlus className="size-4 mr-0.5" data-icon="inline-start" />
                         Create album
                     </Button>
                     {stack.length > 0 && (

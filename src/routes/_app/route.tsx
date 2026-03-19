@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,6 +10,7 @@ import { IconBox } from "@/components/custom/IconBox";
 import { PhotoViewer } from "@/components/custom/PhotoViewer";
 import { Sidebar } from "@/components/layout/sidebar";
 import { CenterLayout } from "@/components/layout/centerLayout";
+import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { checkLibraryHealth, updateLibraryPath, upgradeLibrary } from "@/lib/invoker";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
@@ -23,17 +25,19 @@ export const Route = createFileRoute("/_app")({
 });
 
 function RouteComponent() {
-    const { libraries, selectedLibrary, setOpenCreateLibrary, setPendingLibraryId } = useLibrary();
+    const [openCreateLibrary, setOpenCreateLibrary] = useState(false);
+    const { libraries, selectedLibrary, selectLibraryById } = useLibrary();
     const action = useAction();
     const { migrating, setMigrating } = useMigration();
     const { pushNoti } = useNotifications();
-    const queryClient = useQueryClient();
     const { isFetching, data: libraryExists, error: libraryError } = useQuerySafe({
         queryKey: [selectedLibrary?.id, "library-health"],
         queryFn: () => checkLibraryHealth({ libraryId: selectedLibrary?.id ?? "" }),
         enabled: !!selectedLibrary?.id,
     });
+    const queryClient = useQueryClient();
     const { viewingItem, setViewingItem } = useViewer();
+
     const successLoaded = Boolean(!isFetching && libraryExists);
 
     async function selectNewLocation() {
@@ -72,7 +76,7 @@ function RouteComponent() {
         const rest = libraries.filter(lib => lib.id !== selectedLibrary.id);
 
         await action.removeLibrary();
-        setPendingLibraryId(rest.length >= idx + 1 ? rest[idx].id : (rest.length > 0 ? rest[idx - 1].id : null));
+        await selectLibraryById(rest.length >= idx + 1 ? rest[idx].id : (rest.length > 0 ? rest[idx - 1].id : null));
     }
 
     return (
@@ -148,6 +152,7 @@ function RouteComponent() {
                         </animate.div>
                     </CenterLayout>
                 )}
+                <CreateLibraryDialog open={openCreateLibrary} onOpenChange={setOpenCreateLibrary} />
                 <PhotoViewer item={viewingItem} setItem={setViewingItem} />
             </div>
         </div>

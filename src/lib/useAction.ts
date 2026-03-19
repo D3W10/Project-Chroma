@@ -17,32 +17,25 @@ export function useAction() {
         queryClient.setQueriesData(
             { predicate: q => q.queryKey[0] === libraryId && (q.queryKey[1] === "items" || (q.queryKey[1] === "albums" && q.queryKey[3] === "items")) },
             oldData => {
-                if (!oldData || typeof oldData !== "object" || !("data" in oldData) || !Array.isArray(oldData.data))
+                if (!oldData || !Array.isArray(oldData))
                     return oldData;
 
-                const result = oldData as { data: Item[] };
-                return { ...result, data: update(result.data) };
+                return [...update(oldData as Item[])];
             },
         );
     }
 
     const removeLibrary = useMutationSafe({
         mutationFn: (opts: { libraryId: string }) => invoke.removeLibrary(opts),
-        onSuccess: data => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ queryKey: ["libraries"] });
-        },
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ["libraries"] }),
     });
     const setItemsFavorite = useMutationSafe({
         mutationFn: (opts: { libraryId: string; itemIds: string[]; value: boolean }) => invoke.setItemsFavorite(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            syncItems(vars.libraryId, items => items.map(i => {
-                if (vars.itemIds.includes(i.id))
-                    return { ...i, is_favorite: vars.value };
-                return i;
-            }));
-        },
+        onSuccess: (_, vars) => syncItems(vars.libraryId, items => items.map(i => {
+            if (vars.itemIds.includes(i.id))
+                return { ...i, is_favorite: vars.value };
+            return i;
+        })),
     });
     const transferItems = useMutationSafe({
         mutationFn: (opts: { sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }) => invoke.transferItems({
@@ -51,8 +44,7 @@ export function useAction() {
             itemIds: opts.itemIds,
             doMove: opts.doMove,
         }),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
+        onSuccess: (_, vars) => {
             queryClient.invalidateQueries({ queryKey: [vars.targetId, "items"] });
             if (vars.doMove)
                 syncItems(vars.sourceId, items => items.filter(item => !vars.itemIds.includes(item.id)));
@@ -60,20 +52,14 @@ export function useAction() {
     });
     const deleteItems = useMutationSafe({
         mutationFn: (opts: { libraryId: string; itemIds: string[] }) => invoke.deleteItems(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            syncItems(vars.libraryId, items => items.filter(item => !vars.itemIds.includes(item.id)));
-        },
+        onSuccess: (_, vars) => syncItems(vars.libraryId, items => items.filter(item => !vars.itemIds.includes(item.id))),
     });
     const exportItems = useMutationSafe({
         mutationFn: (opts: { libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }) => invoke.exportItems(opts),
     });
     const createAlbum = useMutationSafe({
         mutationFn: (opts: { libraryId: string; name: string; description?: string; parent?: string; color: string; icon: string }) => invoke.createAlbum(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] }),
     });
     const addItemsToAlbum = useMutationSafe({
         mutationFn: (opts: { libraryId: string; albumId: string; itemIds: string[]; parent?: string }) => invoke.addItemsToAlbum({
@@ -81,32 +67,22 @@ export function useAction() {
             albumId: opts.albumId,
             itemIds: opts.itemIds,
         }),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
+        onSuccess: (_, vars) => {
             queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.albumId, "items"] });
             queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] });
         },
     });
     const createTag = useMutationSafe({
         mutationFn: (opts: { libraryId: string; name: string; color: string }) => invoke.createTag(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ queryKey: [vars.libraryId, "tags"] });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "tags"] }),
     });
     const updateTag = useMutationSafe({
         mutationFn: (opts: { libraryId: string; tagId: string; name?: string; color?: string }) => invoke.updateTag(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ queryKey: [vars.libraryId, "tags"] });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "tags"] }),
     });
     const deleteTags = useMutationSafe({
         mutationFn: (opts: { libraryId: string; tagIds: string[] }) => invoke.deleteTags(opts),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey.includes("tags") });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey.includes("tags") }),
     });
     const addTagsToItems = useMutationSafe({
         mutationFn: (opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) => invoke.addTagsToItems({
@@ -114,10 +90,7 @@ export function useAction() {
             itemIds: opts.itemIds,
             tagIds: opts.tagIds,
         }),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey[1] === "items" && q.queryKey[3] === "tags" });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey[1] === "items" && q.queryKey[3] === "tags" }),
     });
     const removeTagsFromItems = useMutationSafe({
         mutationFn: (opts: { libraryId: string; itemIds: string[]; tagIds: string[] }) => invoke.removeTagsFromItems({
@@ -125,10 +98,7 @@ export function useAction() {
             itemIds: opts.itemIds,
             tagIds: opts.tagIds,
         }),
-        onSuccess: (data, vars) => {
-            if (data.error) return;
-            queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey[1] === "items" && q.queryKey[3] === "tags" });
-        },
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ predicate: q => q.queryKey[0] === vars.libraryId && q.queryKey[1] === "items" && q.queryKey[3] === "tags" }),
     });
 
     return {
@@ -179,7 +149,6 @@ export function useAction() {
         },
         exportItems: (destination: string, itemIds: string[], live: boolean, edits: boolean, adjustments: boolean) => {
             if (!selectedLibrary || !itemIds.length) return;
-
             pushNoti("Exporting items", "Exporting " + itemIds.length + " items to \"" + pathToName(destination) + "\"", "promise", {
                 promise: exportItems.mutateAsync({ libraryId: selectedLibrary.id, destination, itemIds, live, edits, adjustments }),
                 peek: "Exporting items",
@@ -195,7 +164,6 @@ export function useAction() {
         },
         createAlbum: (name: string, parent: string | undefined, color: string, icon: string) => {
             if (!selectedLibrary) return;
-
             return createAlbum.mutateAsync({
                 libraryId: selectedLibrary.id,
                 name,
@@ -207,7 +175,6 @@ export function useAction() {
         },
         addItemsToAlbum: (itemIds: string[], album: Album) => {
             if (!selectedLibrary) return;
-
             pushNoti("Adding items to \"" + album.name + "\"", `Adding ${itemIds.length} ${itemIds.length === 1 ? "item" : "items"} to album "${album.name}"`, "promise", {
                 promise: addItemsToAlbum.mutateAsync({
                     libraryId: selectedLibrary.id,
@@ -228,7 +195,6 @@ export function useAction() {
         },
         createTag: (name: string, color: string) => {
             if (!selectedLibrary) return;
-
             return createTag.mutateAsync({
                 libraryId: selectedLibrary.id,
                 name,
@@ -237,7 +203,6 @@ export function useAction() {
         },
         updateTag: (tagId: string, opts: { name?: string; color?: string }) => {
             if (!selectedLibrary) return;
-
             return updateTag.mutateAsync({
                 libraryId: selectedLibrary.id,
                 tagId,

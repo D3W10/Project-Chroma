@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { useQueryClient } from "@tanstack/react-query";
 import { animate } from "@/components/animated";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,8 @@ export function useLibraryCreate() {
     const [emoji, setEmoji] = useState("");
     const [location, setLocation] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
+    const { selectLibraryById } = useLibrary();
     const { pushNoti } = useNotifications();
-    const queryClient = useQueryClient();
-    const { setPendingLibraryId } = useLibrary();
 
     const isValid = name.trim().length > 0 && color.trim().length > 0 && emoji.trim().length > 0 && location.trim().length > 0;
 
@@ -47,16 +45,15 @@ export function useLibraryCreate() {
 
         setIsProcessing(true);
 
-        const { data, error } = await createLibrary({
+        const { ok, data, error } = await createLibrary({
             name,
             icon: emoji,
             color,
             path: location + name,
         });
 
-        if (error === null) {
-            setPendingLibraryId(data.id);
-            queryClient.invalidateQueries({ queryKey: ["libraries"] });
+        if (ok) {
+            await selectLibraryById(data.id);
             pushNoti("Library created", "The library \"" + name + "\" was created successfully!", "success");
             onSuccess?.();
         }

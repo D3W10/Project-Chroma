@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open as sysOpen } from "@tauri-apps/plugin-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import { IconChevronLeft, IconChevronRight, IconHelpCircle, IconMinus, IconPhotoVideo, IconPlus } from "@tabler/icons-react";
@@ -23,7 +23,12 @@ import { useSettings } from "@/lib/useSettings";
 import { pathToName, pathToStem, unwrapResult } from "@/lib/utils";
 import type { Group, ImportItem } from "@/lib/models";
 
-export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: boolean; onOpenChange: (open: boolean) => void }) {
+interface ImportItemsDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => unknown;
+}
+
+export function ImportItemsDialog({ open, onOpenChange }: ImportItemsDialogProps) {
     const { settings, updateSettings } = useSettings();
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [livePhotos, setLivePhotos] = useState(settings.importOptions.livePhotos);
@@ -108,7 +113,7 @@ export function ImportItemsDialog({ openDialog, onOpenChange }: { openDialog: bo
                 },
             }}
             defaultPage="source"
-            open={openDialog}
+            open={open}
             onOpenChange={onOpenChange}
         />
     );
@@ -168,7 +173,7 @@ function SelectPage({ onItemsSelected }: { onItemsSelected: (items: string[]) =>
     useEffect(() => {
         const timeout = setTimeout(async () => {
             try {
-                const selected = await open({
+                const selected = await sysOpen({
                     multiple: true,
                     filters: [
                         {

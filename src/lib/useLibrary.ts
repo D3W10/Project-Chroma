@@ -1,24 +1,37 @@
 import { create } from "zustand";
-import type { Library } from "./models";
+import { getLibraries } from "@/lib/invoker";
+import type { Library } from "@/lib/models";
 
 interface LibraryState {
     libraries: Library[];
     setLibraries: (libraries: Library[]) => void;
     selectedLibrary: Library | null;
-    setSelectedLibrary: (library: Library | null) => void;
-    openCreateLibrary: boolean;
-    setOpenCreateLibrary: (open: boolean) => void;
-    pendingLibraryId: string | null;
-    setPendingLibraryId: (id: string | null) => void;
+    refreshLibraries: () => Promise<Library[]>;
+    selectLibraryById: (libraryId: string | null) => Promise<void>;
 }
 
-export const useLibrary = create<LibraryState>(set => ({
+export const useLibrary = create<LibraryState>((set, get) => ({
     libraries: [],
     setLibraries: libraries => set({ libraries }),
     selectedLibrary: null,
-    setSelectedLibrary: library => set({ selectedLibrary: library }),
-    openCreateLibrary: false,
-    setOpenCreateLibrary: open => set({ openCreateLibrary: open }),
-    pendingLibraryId: null,
-    setPendingLibraryId: id => set({ pendingLibraryId: id }),
+    refreshLibraries: async () => {
+        const { ok, data } = await getLibraries();
+        if (!ok) return [];
+        set({ libraries: data });
+        return data;
+    },
+    selectLibraryById: async (libraryId: string | null) => {
+        if (!libraryId) {
+            set({ selectedLibrary: null });
+            return;
+        }
+
+        const current = get().libraries.find(l => l.id === libraryId);
+        if (current) {
+            set({ selectedLibrary: current });
+            return;
+        }
+
+        set({ selectedLibrary: (await get().refreshLibraries()).find(l => l.id === libraryId) ?? null });
+    },
 }));
