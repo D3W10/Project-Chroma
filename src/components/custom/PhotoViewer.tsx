@@ -43,7 +43,7 @@ export function PhotoViewer({ item, setItem }: PhotoViewerProps) {
     return (
         <div className={cn("flex flex-col absolute inset-0 z-50 transition-colors duration-200", !item ? "bg-transparent pointer-events-none" : "bg-background")}>
             <TransformWrapper centerOnInit disablePadding>
-                <Toolbar shade="full" className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
+                <Toolbar shade="separate" className={cn("absolute transition-opacity duration-200", !item ? "opacity-0" : "opacity-100")}>
                     <ToolbarGroup>
                         <ReturnButton setItem={setItem} />
                         {item?.live_video && (

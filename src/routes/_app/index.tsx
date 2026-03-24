@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { IconArrowAutofitHeight, IconFilter2, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconMinus, IconPlus, IconShare2 } from "@tabler/icons-react";
+import { IconArrowAutofitHeight, IconFilter2, IconFolderPlus, IconHeart, IconHeartFilled, IconInfoCircle, IconMinus, IconPlus, IconSearch, IconShare2 } from "@tabler/icons-react";
 import { animate } from "@/components/animated";
 import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { IconBox } from "@/components/custom/IconBox";
 import { ItemGrid } from "@/components/custom/ItemGrid";
 import { Toolbar, ToolbarGroup } from "@/components/custom/Toolbar";
@@ -30,6 +32,7 @@ function RouteComponent() {
     const [openAddItems, setOpenAddItems] = useState(false);
     const [addToAlbumDialog, setAddToAlbumDialog] = useState(false);
     const [exportDialog, setExportDialog] = useState(false);
+    const [searchInput, setSearchInput] = useState("");
     const gridParent = useRef<HTMLDivElement>(null);
     const action = useAction();
     const { selectedLibrary } = useLibrary();
@@ -63,6 +66,18 @@ function RouteComponent() {
                     <ImportItemsDialog open={openAddItems} onOpenChange={setOpenAddItems} />
                     <SelectAlbumDialog open={addToAlbumDialog} onOpenChange={setAddToAlbumDialog} onSuccess={a => action.addItemsToAlbum(selected.map(p => p.id), a)} />
                     <ExportDialog open={exportDialog} onOpenChange={setExportDialog} items={selected} />
+                </ToolbarGroup>
+                <ToolbarGroup>
+                    <InputGroup className="w-full">
+                        <InputGroupInput
+                            value={searchInput}
+                            onChange={e => setSearchInput(e.currentTarget.value)}
+                            placeholder="Search photos and videos..."
+                        />
+                        <InputGroupAddon>
+                            <IconSearch />
+                        </InputGroupAddon>
+                    </InputGroup>
                 </ToolbarGroup>
                 <ToolbarGroup>
                     <ButtonGroup>

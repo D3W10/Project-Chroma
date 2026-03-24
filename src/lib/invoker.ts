@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { tryCatch } from "./utils";
-import type { Album, AlbumComp, ImportItem, ImportCandidate, Item, ItemAlbumRef, Library, Settings, LibraryDetails, Tag, TagItemRef } from "./models";
+import type { Album, AlbumComp, ImportItem, ImportCandidate, Item, ItemAlbumRef, ItemSearchMatch, ItemSearchStatus, Library, Settings, LibraryDetails, Tag, TagItemRef } from "./models";
 
 export function getLibraries() {
     return tryCatch(() => invoke<Library[]>("get_libraries"));
@@ -52,6 +52,18 @@ export function addLibrary(opts: { path: string }) {
 
 export function getItems(opts: { libraryId: string }) {
     return tryCatch(() => invoke<Item[]>("get_items", opts));
+}
+
+export function getItemSearchStatus(opts: { libraryId: string }) {
+    return tryCatch(() => invoke<ItemSearchStatus>("get_item_search_status", opts));
+}
+
+export function enableItemSearch(opts: { libraryId: string }) {
+    return tryCatch(() => invoke<ItemSearchStatus>("enable_item_search", opts));
+}
+
+export function searchItems(opts: { libraryId: string; query: string; limit?: number; minScore?: number }) {
+    return tryCatch(() => invoke<ItemSearchMatch[]>("search_items", opts));
 }
 
 export function verifyConflicts(opts: { sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }) {

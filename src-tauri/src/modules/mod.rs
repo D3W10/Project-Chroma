@@ -39,6 +39,22 @@ pub struct ItemAlbumRef {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ItemSearchStatus {
+    pub model_id: Option<String>,
+    pub total_items: u64,
+    pub indexed_items: u64,
+    pub failed_items: u64,
+    pub pending_items: u64,
+    pub indexing: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ItemSearchMatch {
+    pub item_id: String,
+    pub score: f32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Album {
     pub id: String,
     pub name: String,

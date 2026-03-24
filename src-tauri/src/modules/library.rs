@@ -88,8 +88,9 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
         Some(Value::Array(arr)) => arr.clone(),
         _ => vec![],
     };
+    let library_id = Uuid::new_v4().to_string();
     let value = serde_json::json!({
-        "id": Uuid::new_v4().to_string(),
+        "id": library_id.clone(),
         "name": name,
         "icon": icon,
         "color": color,
@@ -100,6 +101,9 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
     store.set("libraries", Value::Array(libraries));
 
     store.save().map_err(|e| e.to_string())?;
+    if is_search_enabled(&app) {
+    }
+
     Ok(value)
 }
 
@@ -136,6 +140,9 @@ pub fn add_library(app: AppHandle, path: String) -> Result<Value, String> {
     store.set("libraries", Value::Array(libraries));
 
     store.save().map_err(|e| e.to_string())?;
+    if is_search_enabled(&app) {
+    }
+
     Ok(value)
 }
 
@@ -285,6 +292,9 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<modules::I
 
     for item in &processed_items {
         db::insert_item(&conn, item)?;
+    }
+
+    if is_search_enabled(&app) {
     }
 
     Ok(processed_items)
@@ -495,6 +505,9 @@ pub fn transfer_items(app: AppHandle, source_id: String, target_id: String, item
         if do_move {
             db::delete_item(&conn_src, id)?;
         }
+    }
+
+    if is_search_enabled(&app) {
     }
 
     Ok(())

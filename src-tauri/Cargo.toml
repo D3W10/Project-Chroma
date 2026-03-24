@@ -30,4 +30,6 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png",
 libheif-rs = "2.4.0"
 kamadak-exif = "0.6.1"
 rayon = "1.11.0"
+once_cell = "1.21.3"
+open_clip_inference = "0.2.6"
 tauri-plugin-os = "2"

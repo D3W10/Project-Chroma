@@ -33,6 +33,20 @@ export interface ItemAlbumRef extends Item {
     added_at: string;
 }
 
+export interface ItemSearchStatus {
+    model_id?: string;
+    total_items: number;
+    indexed_items: number;
+    failed_items: number;
+    pending_items: number;
+    indexing: boolean;
+}
+
+export interface ItemSearchMatch {
+    item_id: string;
+    score: number;
+}
+
 export interface Album {
     id: string;
     name: string;
@@ -103,6 +117,7 @@ export type Settings = {
     accentColor: number;
     libraryZoom: number;
     libraryExpanded: boolean;
+    searchEnabled: boolean;
     importOptions: {
         livePhotos: boolean;
         edits: boolean;

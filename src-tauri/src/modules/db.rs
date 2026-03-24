@@ -115,6 +115,23 @@ pub fn create_library_schema(conn: &Connection) -> Result<(), String> {
         [],
     ).map_err(|e| utils::treat(e, "Error creating library"))?;
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS item_search_index (
+            item_id TEXT NOT NULL,
+            model_id TEXT NOT NULL,
+            state INTEGER NOT NULL,
+            embedding BLOB,
+            embedding_dim INTEGER,
+            error TEXT,
+            indexed_at TEXT,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (item_id, model_id),
+            FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
+        )",
+        [],
+    )
+    .map_err(|e| utils::treat(e, "Error creating library"))?;
+
     Ok(())
 }
 

@@ -147,7 +147,10 @@ pub fn generate_video_thumbnail(app: &AppHandle, input: &Path, output: &Path) ->
     let input_str = input.to_string_lossy().to_string();
     let output_str = output.to_string_lossy().to_string();
 
-    let sidecar_command = app.shell().command("ffmpeg").args([
+    let mut sidecar_command = app.shell().sidecar("ffmpeg")
+        .map_err(|e| treat(e, "Failed to resolve ffmpeg sidecar"))?;
+
+    sidecar_command = sidecar_command.args([
         "-y",
         "-i", &input_str,
         "-vf", "thumbnail,scale=512:512:force_original_aspect_ratio=decrease",
@@ -169,7 +172,10 @@ pub fn generate_video_thumbnail(app: &AppHandle, input: &Path, output: &Path) ->
 pub fn get_video_metadata(app: &AppHandle, path: &Path) -> Result<(u32, u32, u64), String> {
     let path_str = path.to_string_lossy().to_string();
 
-    let sidecar_command = app.shell().command("ffprobe").args([
+    let mut sidecar_command = app.shell().sidecar("ffprobe")
+        .map_err(|e| treat(e, "Failed to resolve ffprobe sidecar"))?;
+
+    sidecar_command = sidecar_command.args([
         "-v", "error",
         "-select_streams", "v:0",
         "-show_entries", "stream=width,height,duration",
