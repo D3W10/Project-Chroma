@@ -15,9 +15,10 @@ use crate::modules;
 use crate::modules::config;
 use crate::modules::db;
 use crate::modules::migrations;
+use crate::modules::search;
 use crate::modules::utils;
 
-fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, String> {
+pub fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, String> {
     let meta_path = get_library_root_path(app, library_id)?;
     if !meta_path.exists() {
         log::error!("Library {} not found", library_id);
@@ -28,7 +29,7 @@ fn get_db_connection(app: &AppHandle, library_id: &str) -> Result<Connection, St
     db::open_connection(&db_path)
 }
 
-fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, String> {
+pub fn get_library_root_path(app: &AppHandle, library_id: &str) -> Result<PathBuf, String> {
     let store = config::get_store(&app)?;
     let libraries = match store.get("libraries") {
         Some(Value::Array(arr)) => arr,
@@ -101,7 +102,8 @@ pub fn create_library(app: AppHandle, name: &str, icon: &str, color: &str, path:
     store.set("libraries", Value::Array(libraries));
 
     store.save().map_err(|e| e.to_string())?;
-    if is_search_enabled(&app) {
+    if search::is_search_enabled(&app) {
+        search::spawn_item_search_indexer(app.clone(), library_id)?;
     }
 
     Ok(value)
@@ -140,7 +142,8 @@ pub fn add_library(app: AppHandle, path: String) -> Result<Value, String> {
     store.set("libraries", Value::Array(libraries));
 
     store.save().map_err(|e| e.to_string())?;
-    if is_search_enabled(&app) {
+    if search::is_search_enabled(&app) {
+        search::spawn_item_search_indexer(app.clone(), library_id)?;
     }
 
     Ok(value)
@@ -294,7 +297,8 @@ pub async fn add_items(app: AppHandle, library_id: String, items: Vec<modules::I
         db::insert_item(&conn, item)?;
     }
 
-    if is_search_enabled(&app) {
+    if search::is_search_enabled(&app) {
+        search::spawn_item_search_indexer(app.clone(), library_id.clone())?;
     }
 
     Ok(processed_items)
@@ -507,7 +511,8 @@ pub fn transfer_items(app: AppHandle, source_id: String, target_id: String, item
         }
     }
 
-    if is_search_enabled(&app) {
+    if search::is_search_enabled(&app) {
+        search::spawn_item_search_indexer(app.clone(), target_id.clone())?;
     }
 
     Ok(())

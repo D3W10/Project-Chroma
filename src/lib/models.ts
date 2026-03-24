@@ -34,7 +34,6 @@ export interface ItemAlbumRef extends Item {
 }
 
 export interface ItemSearchStatus {
-    model_id?: string;
     total_items: number;
     indexed_items: number;
     failed_items: number;

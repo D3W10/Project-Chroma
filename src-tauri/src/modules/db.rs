@@ -118,14 +118,12 @@ pub fn create_library_schema(conn: &Connection) -> Result<(), String> {
     conn.execute(
         "CREATE TABLE IF NOT EXISTS item_search_index (
             item_id TEXT NOT NULL,
-            model_id TEXT NOT NULL,
             state INTEGER NOT NULL,
             embedding BLOB,
             embedding_dim INTEGER,
             error TEXT,
             indexed_at TEXT,
-            updated_at TEXT NOT NULL,
-            PRIMARY KEY (item_id, model_id),
+            PRIMARY KEY (item_id),
             FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
         )",
         [],
@@ -173,6 +171,11 @@ pub fn fetch_items(conn: &Connection) -> Result<Vec<modules::Item>, String> {
     }
 
     Ok(items)
+}
+
+pub fn count_items(conn: &Connection) -> Result<u64, String> {
+    conn.query_row("SELECT COUNT(*) FROM item", [], |row| row.get(0))
+        .map_err(|e| utils::treat(e, "Unable to read item count"))
 }
 
 pub fn fetch_items_by_id(conn: &Connection, item_ids: &Vec<String>) -> Result<Vec<modules::Item>, String> {
@@ -269,6 +272,117 @@ pub fn delete_item(conn: &Connection, item_id: &str) -> Result<(), String> {
     ).map_err(|e| utils::treat(e, "Error deleting item from database"))?;
 
     Ok(())
+}
+
+pub fn count_indexed_items(conn: &Connection) -> Result<u64, String> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM item_search_index WHERE state = 1",
+        [],
+        |row| row.get(0),
+    ).map_err(|e| utils::treat(e, "Unable to read indexed items"))
+}
+
+pub fn count_failed_items(conn: &Connection) -> Result<u64, String> {
+    conn.query_row(
+        "SELECT COUNT(*) FROM item_search_index WHERE state = 2",
+        [],
+        |row| row.get(0),
+    ).map_err(|e| utils::treat(e, "Unable to read failed indexed items"))
+}
+
+pub fn fetch_pending_item_ids(conn: &Connection, limit: usize) -> Result<Vec<String>, String> {
+    let mut stmt = conn.prepare(
+        "SELECT i.id FROM item i
+            LEFT JOIN item_search_index s ON s.item_id = i.id
+            WHERE s.item_id IS NULL
+            ORDER BY i.created_at ASC
+            LIMIT ?1",
+        ).map_err(|e| utils::treat(e, "Unable to load items pending indexing"))?;
+
+    let iter = stmt.query_map(
+        params![limit as i64],
+        |row| row.get::<_, String>(0)
+    ).map_err(|e| utils::treat(e, "Unable to load items pending indexing"))?;
+
+    let mut item_ids = Vec::new();
+    for item_id in iter {
+        item_ids.push(item_id.map_err(|e| utils::treat(e, "Unable to load items pending indexing"))?);
+    }
+
+    Ok(item_ids)
+}
+
+pub fn upsert_item_search_embedding(conn: &Connection, item_id: &str, embedding: &[u8], embedding_dim: usize) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO item_search_index (
+            item_id,
+            state,
+            embedding,
+            embedding_dim,
+            error,
+            indexed_at
+        ) VALUES (?1, 1, ?2, ?3, NULL, ?4)
+        ON CONFLICT(item_id) DO UPDATE SET
+            state = 1,
+            embedding = excluded.embedding,
+            embedding_dim = excluded.embedding_dim,
+            error = NULL,
+            indexed_at = excluded.indexed_at",
+        params![item_id, embedding, embedding_dim as i64, Utc::now().to_rfc3339()],
+    ).map_err(|e| utils::treat(e, "Unable to store search embedding"))?;
+
+    Ok(())
+}
+
+pub fn upsert_item_search_failure(conn: &Connection, item_id: &str, error: &str) -> Result<(), String> {
+    conn.execute(
+        "INSERT INTO item_search_index (
+            item_id,
+            state,
+            embedding,
+            embedding_dim,
+            error,
+            indexed_at
+        ) VALUES (?1, 2, NULL, NULL, ?2, NULL)
+        ON CONFLICT(item_id) DO UPDATE SET
+            state = 2,
+            embedding = NULL,
+            embedding_dim = NULL,
+            error = excluded.error,
+            indexed_at = NULL",
+        params![item_id, error],
+    ).map_err(|e| utils::treat(e, "Unable to mark item indexing failure"))?;
+
+    Ok(())
+}
+
+pub struct ItemSearchEmbedding {
+    pub item_id: String,
+    pub embedding: Vec<u8>,
+    pub embedding_dim: usize,
+}
+
+pub fn fetch_item_search_embeddings(conn: &Connection) -> Result<Vec<ItemSearchEmbedding>, String> {
+    let mut stmt = conn.prepare(
+        "SELECT item_id, embedding, embedding_dim
+        FROM item_search_index
+        WHERE state = 1 AND embedding IS NOT NULL AND embedding_dim IS NOT NULL",
+    ).map_err(|e| utils::treat(e, "Unable to load search embeddings"))?;
+
+    let iter = stmt.query_map([], |row| {
+        Ok(ItemSearchEmbedding {
+            item_id: row.get(0)?,
+            embedding: row.get(1)?,
+            embedding_dim: row.get::<_, i64>(2)? as usize,
+        })
+    }).map_err(|e| utils::treat(e, "Unable to load search embeddings"))?;
+
+    let mut rows = Vec::new();
+    for row in iter {
+        rows.push(row.map_err(|e| utils::treat(e, "Unable to load search embeddings"))?);
+    }
+
+    Ok(rows)
 }
 
 pub fn fetch_albums(conn: &Connection, parent: Option<String>) -> Result<Vec<modules::AlbumComp>, String> {

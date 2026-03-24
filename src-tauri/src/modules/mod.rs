@@ -5,6 +5,7 @@ pub mod config;
 pub mod db;
 pub mod library;
 pub mod migrations;
+pub mod search;
 pub mod utils;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -40,7 +41,6 @@ pub struct ItemAlbumRef {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ItemSearchStatus {
-    pub model_id: Option<String>,
     pub total_items: u64,
     pub indexed_items: u64,
     pub failed_items: u64,

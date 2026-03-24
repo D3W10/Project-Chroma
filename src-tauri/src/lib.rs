@@ -3,6 +3,7 @@ use tauri_plugin_store::StoreExt;
 mod modules;
 use modules::config;
 use modules::library;
+use modules::search;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -27,9 +28,9 @@ pub fn run() {
             library::get_library_info_from_path,
             library::add_library,
             library::get_items,
-            library::get_item_search_status,
-            library::enable_item_search,
-            library::search_items,
+            search::get_item_search_status,
+            search::enable_item_search,
+            search::search_items,
             library::verify_conflicts,
             library::add_items,
             library::set_items_favorite,
