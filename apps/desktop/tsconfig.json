@@ -1,0 +1,8 @@
+{
+    "extends": "../../tsconfig.json",
+    "compilerOptions": {
+        "types": ["node", "electron"],
+        "lib": ["ESNext", "DOM", "esnext.disposable"]
+    },
+    "include": ["src", "tsdown.config.ts"]
+}

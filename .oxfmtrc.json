@@ -1,0 +1,5 @@
+{
+    "arrowParens": "avoid",
+    "ignorePatterns": ["dist", "dist-electron", "node_modules", "bun.lock", "**/routeTree.gen.ts"],
+    "tabWidth": 4
+}

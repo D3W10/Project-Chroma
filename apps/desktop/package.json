@@ -1,0 +1,23 @@
+{
+    "name": "@project-chroma/desktop",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "main": "dist-electron/main.cjs",
+    "scripts": {
+        "build": "tsdown",
+        "start": "electron .",
+    },
+    "dependencies": {
+        "@project-chroma/contracts": "workspace:*",
+        "better-sqlite3": "^12.5.0",
+        "electron": "^39.2.7",
+        "sharp": "^0.34.5",
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.13",
+        "@types/node": "catalog:",
+        "tsdown": "^0.22.0"
+    },
+    "productName": "Project Chroma"
+}

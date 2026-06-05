@@ -1,0 +1,18 @@
+{
+    "name": "@project-chroma/contracts",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        "./config": "./src/config.ts",
+        "./gallery": "./src/gallery.ts",
+        "./ipc": "./src/ipc.ts"
+    },
+    "scripts": {
+        "typecheck": "tsc --noEmit"
+    },
+    "devDependencies": {
+        "@types/node": "catalog:",
+        "typescript": "catalog:"
+    }
+}
