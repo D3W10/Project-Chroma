@@ -19,12 +19,22 @@ type ConfigParams = {
 export type ConfigStore = {
     path: string;
     get: () => Promise<ChromaConfig>;
-    set<TKey extends keyof ChromaConfig>(key: TKey, value: ChromaConfig[TKey]): Promise<void>;
+    set: (partial: Partial<ChromaConfig>) => Promise<void>;
     update: (config: ChromaConfig) => Promise<void>;
 };
 
 export function createConfigStore({ app, fileName = "config.json" }: ConfigParams) {
     const configPath = path.join(app.getPath("userData"), fileName);
+    let operationQueue = Promise.resolve();
+
+    function enqueue<T>(operation: () => Promise<T>): Promise<T> {
+        const result = operationQueue.then(operation, operation);
+        operationQueue = result.then(
+            () => undefined,
+            () => undefined,
+        );
+        return result;
+    }
 
     async function read(): Promise<ChromaConfig> {
         try {
@@ -50,7 +60,7 @@ export function createConfigStore({ app, fileName = "config.json" }: ConfigParam
 
     async function write(config: ChromaConfig): Promise<void> {
         await fs.mkdir(path.dirname(configPath), { recursive: true });
-        const tempPath = `${configPath}.${process.pid}.tmp`;
+        const tempPath = path.join(path.dirname(configPath), `${path.basename(configPath)}.${process.pid}.tmp`);
         await fs.writeFile(tempPath, `${JSON.stringify(config, null, 4)}\n`, "utf8");
         await fs.rename(tempPath, configPath);
     }
@@ -58,16 +68,18 @@ export function createConfigStore({ app, fileName = "config.json" }: ConfigParam
     return {
         path: configPath,
         get() {
-            return read();
+            return enqueue(() => read());
         },
-        async set<TKey extends keyof ChromaConfig>(key: TKey, value?: ChromaConfig[TKey]) {
-            return write({
-                ...(await read()),
-                [key]: value,
-            });
+        async set(partial: Partial<ChromaConfig>) {
+            return enqueue(async () =>
+                write({
+                    ...(await read()),
+                    ...partial,
+                }),
+            );
         },
         update(config: ChromaConfig) {
-            return write(config);
+            return enqueue(() => write(config));
         },
     } satisfies ConfigStore;
 }

@@ -5,9 +5,7 @@
     "type": "module",
     "exports": {
         "./*": "./src/components/*.tsx",
-        "./globals.css": "./src/styles/globals.css",
-        "./lib/*": "./src/lib/*.ts",
-        "./hooks/*": "./src/hooks/*.ts"
+        "./globals.css": "./src/styles/globals.css"
     },
     "scripts": {
         "typecheck": "tsc --noEmit"
@@ -15,13 +13,13 @@
     "dependencies": {
         "@base-ui/react": "^1.5.0",
         "@fontsource-variable/inter": "^5.2.8",
+        "@project-chroma/utils": "workspace:*",
         "@tabler/icons-react": "catalog:",
         "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
+        "cmdk": "^1.1.1",
         "react": "catalog:",
         "react-dom": "catalog:",
         "sonner": "catalog:",
-        "tailwind-merge": "^3.6.0",
         "tw-animate-css": "catalog:"
     },
     "devDependencies": {

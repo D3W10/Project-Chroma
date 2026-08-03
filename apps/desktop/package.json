@@ -10,6 +10,7 @@
     },
     "dependencies": {
         "@project-chroma/contracts": "workspace:*",
+        "@project-chroma/utils": "workspace:*",
         "better-sqlite3": "^12.5.0",
         "electron": "^39.2.7",
         "sharp": "^0.34.5",

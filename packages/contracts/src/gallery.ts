@@ -62,6 +62,28 @@ export interface Tag {
 export interface TagItemRef extends Tag {
     addedAt: string;
 }
+
+export interface ImportItem {
+    sourcePath: string;
+    livePath?: string | undefined;
+    originalSourcePath?: string | undefined;
+    originalLivePath?: string | undefined;
+    adjustmentsPath?: string | undefined;
+}
+
+export interface ImportCandidate {
+    itemsToImport: ImportItem[];
+    conflicts: ConflictGroup[];
+}
+
+export interface ConflictGroup {
+    originalItems: string[];
+    editedItems: string[];
+    originalVideos: string[];
+    editedVideos: string[];
+    adjustments?: string;
+}
+
 export interface Notification {
     id: string;
     title: string;
@@ -74,3 +96,13 @@ export interface Notification {
 }
 
 export type NotificationType = "info" | "success" | "error" | "warning" | "promise";
+
+export type LibraryHealth = "healthy" | "outdated" | "recent";
+
+export interface LibraryMetadata {
+    name: string;
+    icon: string;
+    color: string;
+    count: number;
+    createdAt: string;
+}

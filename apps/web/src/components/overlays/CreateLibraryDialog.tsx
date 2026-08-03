@@ -1,0 +1,46 @@
+import { Button } from "@project-chroma/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@project-chroma/ui/dialog";
+import { Spinner } from "@project-chroma/ui/spinner";
+import { useLibraryCreate, LibraryCreate } from "@/components/LibraryCreate";
+
+interface CreateLibraryDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => unknown;
+}
+
+export function CreateLibraryDialog(props: CreateLibraryDialogProps) {
+    const { open, ...rest } = props;
+
+    return (
+        <Dialog open={open} onOpenChange={rest.onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Create new library</DialogTitle>
+                    <DialogDescription>
+                        A library is where you store all your photos, videos and albums. You may create multiple libraries if you want to store items on different locations
+                    </DialogDescription>
+                </DialogHeader>
+                <CreateLibraryDialogBody {...rest} />
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function CreateLibraryDialogBody({ onOpenChange }: Omit<CreateLibraryDialogProps, "open">) {
+    const libCreate = useLibraryCreate();
+
+    return (
+        <>
+            <LibraryCreate state={libCreate} />
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" disabled={libCreate.isProcessing} onClick={() => onOpenChange(false)}>
+                    Cancel
+                </Button>
+                <Button className="w-30 flex justify-center relative" disabled={!libCreate.isValid || libCreate.isProcessing} onClick={() => libCreate.create(() => onOpenChange(false))}>
+                    <span className={libCreate.isProcessing ? "opacity-0" : ""}>Create Library</span>
+                    <Spinner className={`absolute ${!libCreate.isProcessing ? "opacity-0" : "opacity-100"}`} />
+                </Button>
+            </div>
+        </>
+    );
+}

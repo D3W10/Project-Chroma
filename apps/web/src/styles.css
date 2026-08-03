@@ -1,0 +1,34 @@
+@import "@project-chroma/ui/globals.css";
+@source "../../../packages/ui/src/**/*.{ts,tsx}";
+
+@layer base {
+    * {
+        @apply select-none box-border;
+    }
+
+    body {
+        @apply bg-page text-foreground overflow-hidden;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    img {
+        -webkit-user-drag: none;
+    }
+
+    a {
+        @apply block;
+    }
+
+    #app {
+        @apply h-screen flex flex-col;
+    }
+}
+
+.app-drag-region {
+    -webkit-app-region: drag;
+}
+
+.app-drag-region button,
+.app-drag-region a {
+    -webkit-app-region: no-drag;
+}

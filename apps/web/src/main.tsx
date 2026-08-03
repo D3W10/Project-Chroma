@@ -2,8 +2,8 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
 import { IconX } from "@tabler/icons-react";
+import { Toaster } from "sonner";
 import { getNotiIcon } from "@/lib/utils";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
@@ -22,6 +22,7 @@ const queryClient = new QueryClient({
             refetchOnReconnect: false,
             staleTime: 15000,
             gcTime: 1000 * 60 * 30,
+            retry: false,
         },
         mutations: {
             retry: false,
@@ -54,7 +55,7 @@ if (rootElement && !rootElement.innerHTML) {
                     gap={6}
                     offset={{ top: 54, right: 44 }}
                     closeButton
-                    className="pointer-events-auto [--width:320px]!"
+                    className="pointer-events-auto"
                 />
                 <RouterProvider router={router} />
             </QueryClientProvider>

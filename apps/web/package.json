@@ -12,6 +12,7 @@
     "dependencies": {
         "@project-chroma/contracts": "workspace:*",
         "@project-chroma/ui": "workspace:*",
+        "@project-chroma/utils": "workspace:*",
         "@tabler/icons-react": "catalog:",
         "@tanstack/react-query": "^5.90.20",
         "@tanstack/react-router": "^1.155.0",

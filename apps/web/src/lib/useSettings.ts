@@ -6,11 +6,13 @@ interface SettingsState {
     updateSettings: (partial: Partial<ChromaSettings>) => Promise<void>;
 }
 
+export const defaultSettings = defaultChromaConfig.settings;
+
 export const useSettings = create<SettingsState>((set, get) => ({
-    settings: defaultChromaConfig.settings,
+    settings: defaultSettings,
     updateSettings: async (partial: Partial<ChromaSettings>) => {
         const whole = { ...get().settings, ...partial };
         set({ settings: whole });
-        await window.chroma?.config.set("settings", whole);
+        await window.chroma?.config.set({ settings: whole });
     },
 }));

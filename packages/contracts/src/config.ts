@@ -9,7 +9,7 @@ export interface ChromaConfig {
 export interface ChromaSettings {
     configured: boolean;
     theme: "dark" | "light";
-    accentColor: number;
+    accentColor: string;
     libraryZoom: number;
     libraryExpanded: boolean;
     searchEnabled: boolean;
@@ -30,7 +30,7 @@ export const defaultChromaConfig = {
     settings: {
         configured: false,
         theme: "dark",
-        accentColor: 8,
+        accentColor: "skyaqua",
         libraryZoom: 2,
         libraryExpanded: false,
         searchEnabled: false,

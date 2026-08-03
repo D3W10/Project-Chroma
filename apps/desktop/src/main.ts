@@ -2,7 +2,7 @@ import { app, BrowserWindow, nativeTheme, net, protocol, session, shell } from "
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConfigStore } from "./lib/config.ts";
-import { registerIpcHandlers } from "./lib/ipc.ts";
+import { registerIpcHandlers } from "./commands/ipc.ts";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 
@@ -17,6 +17,10 @@ protocol.registerSchemesAsPrivileged([
         },
     },
 ]);
+
+function getInitialWindowBackgroundColor(): string {
+    return nativeTheme.shouldUseDarkColors ? "#0a0a0a" : "#ffffff";
+}
 
 function getRendererUrl(): string {
     if (isDev) {
@@ -41,6 +45,7 @@ function createWindow() {
         minWidth: 900,
         minHeight: 620,
         show: false,
+        backgroundColor: getInitialWindowBackgroundColor(),
         title: app.name,
         titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
         trafficLightPosition: { x: 17, y: 17 },
@@ -85,6 +90,7 @@ const config = createConfigStore({
 app.whenReady()
     .then(() => {
         registerIpcHandlers({
+            app,
             config,
             getWindow: () => mainWindow,
         });

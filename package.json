@@ -24,10 +24,9 @@
     "type": "module",
     "scripts": {
         "dev": "turbo run dev",
-        "dev:desktop": "node scripts/dev-runner.ts dev:desktop",
-        "dev:web": "node scripts/dev-runner.ts dev:web",
-        "start": "turbo run start --filter=t3",
-        "start:desktop": "turbo run start --filter=@t3tools/desktop",
+        "dev:web": "turbo run dev --filter=@project-chroma/web",
+        "start": "turbo run start --filter=@project-chroma/desktop",
+        "start:web": "turbo run start --filter=@project-chroma/web",
         "build": "turbo run build",
         "lint": "oxlint",
         "test": "turbo run test",
