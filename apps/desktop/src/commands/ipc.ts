@@ -3,6 +3,7 @@ import { ipc } from "@project-chroma/contracts/ipc";
 import { safeBound, toResult } from "@project-chroma/utils";
 import { registerConfigCommands } from "./config.ts";
 import { registerLibraryCommands } from "./library.ts";
+import type { ChromaIpcArgs, ChromaIpcChannel, ChromaIpcHandler, ChromaIpcRegister } from "@project-chroma/contracts/ipc";
 type RegisterIpcHandlersOptions = {
     app: Electron.App;
     config: ConfigStore;
@@ -68,7 +69,5 @@ export function registerIpcHandlers({ app, config, getWindow, autoUpdates }: Reg
     });
 
     registerConfigCommands(config);
-
-
-    registerLibraryCommands(config);
+    registerLibraryCommands(app, config);
 }

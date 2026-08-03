@@ -1,7 +1,7 @@
 import { optional, sqlify } from "../schema.ts";
+import { boolToInt, type DbRow } from "../types.ts";
 import type { Item, ItemSearchMatch, Tag, TagItemRef } from "@project-chroma/contracts/gallery";
 import type { ChromaDB } from "../connection.ts";
-import type { DbRow } from "../types.ts";
 
 export function getAllItems(db: ChromaDB): Item[] {
     const orderColumn = hasColumn(db, "item", "takenDate") ? "takenDate" : "taken_date";
@@ -60,6 +60,6 @@ export function addItems(db: ChromaDB, items: Item[]) {
 
 export function setFavoriteState(db: ChromaDB, itemIds: readonly string[], value: boolean): void {
     const placeholders = itemIds.map(() => "?").join(",");
-    db.prepare(`UPDATE item SET isFavorite = ? WHERE id IN (${placeholders})`).run(value, ...itemIds);
+    db.prepare(`UPDATE item SET isFavorite = ? WHERE id IN (${placeholders})`).run(boolToInt(value), ...itemIds);
 }
 }

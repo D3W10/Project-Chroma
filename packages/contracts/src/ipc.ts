@@ -1,6 +1,6 @@
+import type { AppError, Result } from "@project-chroma/utils";
 import type { ChromaConfig } from "./config.ts";
-
-import type { Result } from "@project-chroma/utils";
+import type { Album, AlbumComp, ImportCandidate, ImportItem, Item, ItemAlbumRef, Library, LibraryHealth, LibraryMetadataPath, Tag, TagItemRef } from "./gallery.ts";
 
 export const ipc = {
     WINDOW_ACTION: "chroma:window-action",
@@ -40,7 +40,7 @@ export type ChromaIpcMap = {
     [ipc.CONFIG_UPDATE]: (config: ChromaConfig) => void;
     [ipc.LIBRARY_GET]: () => Library[];
     [ipc.LIBRARY_CHECK_HEALTH]: (options: { libraryId: string }) => LibraryHealth;
-    [ipc.LIBRARY_GET_INFO_FROM_PATH]: (options: { path: string }) => LibraryDetailsPath;
+    [ipc.LIBRARY_GET_INFO_FROM_PATH]: (options: { path: string }) => LibraryMetadataPath;
     [ipc.LIBRARY_CREATE]: (options: { name: string; icon: string; color: string; path: string }) => Library;
     [ipc.LIBRARY_ADD]: (options: { path: string }) => Library;
     [ipc.LIBRARY_UPDATE_PATH]: (options: { libraryId: string; newPath: string }) => void;
@@ -106,10 +106,32 @@ export type ChromaSaveDialogOptions = {
     defaultPath?: string;
     canCreateDirectories?: boolean;
 };
-export type ChromaIpcInvoke = <
-    TChannel extends ChromaIpcChannel,
-    const TArgs extends ChromaIpcArgs<TChannel>,
->(
-    channel: TChannel,
+export type ChromaIpcChannel = keyof ChromaIpcMap;
+
+type IpcFunction = (...args: never[]) => unknown;
+type MaybePromise<T> = Promise<T> | T;
+type MaybeResult<T> = Result<T> | T;
+
+export type ChromaIpcArgs<TChannel extends ChromaIpcChannel> = Parameters<ChromaIpcMap[TChannel]>;
+
+type MatchingIpcFunction<TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel>> = ChromaIpcMap[TChannel] extends infer TFunction extends IpcFunction
+    ? TFunction extends unknown
+        ? TArgs extends Parameters<TFunction>
+            ? TFunction
+            : never
+        : never
+    : never;
+
+export type ChromaIpcResult<TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel>> = ReturnType<MatchingIpcFunction<TChannel, TArgs>>;
+
+export type ChromaIpcInvoke = <TChannel extends ChromaIpcChannel, const TArgs extends ChromaIpcArgs<TChannel>>(channel: TChannel, ...args: TArgs) => Promise<Result<ChromaIpcResult<TChannel, TArgs>>>;
+
+export type ChromaIpcHandler<TEvent, TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel> = ChromaIpcArgs<TChannel>> = (
+    event: TEvent,
     ...args: TArgs
-) => Promise<Result<ChromaIpcResult<TChannel, TArgs>>>;
+) => MaybePromise<MaybeResult<ChromaIpcResult<TChannel, TArgs>>>;
+
+export type ChromaIpcRegister<TEvent> = <TChannel extends ChromaIpcChannel, const TArgs extends ChromaIpcArgs<TChannel>>(
+    channel: TChannel,
+    listener: ChromaIpcHandler<TEvent, TChannel, TArgs>,
+) => void;

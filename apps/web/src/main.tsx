@@ -2,9 +2,7 @@ import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { IconX } from "@tabler/icons-react";
 import { Toaster } from "sonner";
-import { getNotiIcon } from "@/lib/utils";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
@@ -42,21 +40,7 @@ if (rootElement && !rootElement.innerHTML) {
     root.render(
         <StrictMode>
             <QueryClientProvider client={queryClient}>
-                <Toaster
-                    position="top-right"
-                    duration={5000}
-                    icons={{
-                        info: getNotiIcon("info"),
-                        success: getNotiIcon("success"),
-                        warning: getNotiIcon("warning"),
-                        error: getNotiIcon("error"),
-                        close: <IconX />,
-                    }}
-                    gap={6}
-                    offset={{ top: 54, right: 44 }}
-                    closeButton
-                    className="pointer-events-auto"
-                />
+                <Toaster position="top-right" duration={5000} gap={6} offset={{ top: 54, right: 44 }} closeButton />
                 <RouterProvider router={router} />
             </QueryClientProvider>
         </StrictMode>,

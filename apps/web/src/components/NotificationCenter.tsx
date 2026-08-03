@@ -2,9 +2,9 @@ import { IconInfoCircle, IconX } from "@tabler/icons-react";
 import { AnimatePresence, motion, useIsPresent } from "motion/react";
 import { Button } from "@project-chroma/ui/button";
 import { Progress } from "@project-chroma/ui/progress";
+import { notiIcons } from "@project-chroma/ui/sonner";
 import { cn } from "@project-chroma/utils";
 import { IconBox } from "@/components/IconBox";
-import { getNotiIcon } from "@/lib/utils";
 import { useNotifications } from "@/lib/useNotifications";
 import type { Notification } from "@project-chroma/contracts/gallery";
 
@@ -79,11 +79,11 @@ function NotificationItem({ notification, i }: { notification: Notification; i: 
                 overflow: "hidden",
             }}
             transition={{ duration: 0.2 }}
-            className="px-2 pt-1.5 pb-2 flex flex-col gap-1 hover:bg-muted/40 rounded-sm group transition-colors"
+            className="p-2 flex flex-col gap-1 hover:bg-muted/40 rounded-lg group transition-colors"
         >
             <div className="w-full flex items-center gap-2.5">
-                {getNotiIcon(notification.type)}
-                <div className="flex gap-1 items-center flex-1">
+                {notiIcons[notification.type]}
+                <div className="-mt-0.5 flex gap-1 items-center flex-1">
                     <h4 className="flex-1 text-sm font-medium">{notification.title}</h4>
                     <div className="flex justify-end items-center relative">
                         <span className={"text-2xs text-muted-foreground whitespace-nowrap transition-opacity" + (notification.type !== "promise" ? " group-hover:opacity-0" : "")}>
@@ -92,8 +92,8 @@ function NotificationItem({ notification, i }: { notification: Notification; i: 
                         {isPresent && notification.type !== "promise" && (
                             <Button
                                 variant="ghost"
-                                size="icon-xs"
-                                className="absolute top-0 right-0 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 z-1"
+                                size="icon-2xs"
+                                className="absolute -top-0.5 -right-0.5 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 z-1"
                                 onClick={() => clearNoti(notification.id)}
                             >
                                 <IconX />

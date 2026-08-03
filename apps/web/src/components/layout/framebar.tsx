@@ -1,13 +1,51 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 import { IconClipboardList, IconMinus, IconSelector, IconSettings, IconSquares, IconX } from "@tabler/icons-react";
+import { toast } from "sonner";
 import { Button } from "@project-chroma/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@project-chroma/ui/popover";
+import { Separator } from "@project-chroma/ui/separator";
 import { Spinner } from "@project-chroma/ui/spinner";
 import { cn } from "@project-chroma/utils";
+import { IconColor } from "@/components/IconColor";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { AddLibraryDialog } from "@/components/overlays/AddLibraryDialog";
+import { CreateLibraryDialog } from "@/components/overlays/CreateLibraryDialog";
 import { useExistingLibraryImport } from "@/lib/useExistingLibraryImport";
+import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import type { Library } from "@project-chroma/contracts/gallery";
 
 export function Framebar({ libraries }: { libraries: Library[] }) {
+    const [isLibraryPanelOpen, setIsLibraryPanelOpen] = useState(false);
+    const [openCreateLibrary, setOpenCreateLibrary] = useState(false);
+    const { selectedLibrary, selectLibraryById } = useLibrary();
+    const { isAddLibraryOpen, setIsAddLibraryOpen, libraryToAdd, selectExistingLibrary } = useExistingLibraryImport();
+    const { notifications, isOpen, hasUnread, setIsOpen } = useNotifications();
+    const location = useLocation();
+
+    const peekNotification = notifications.find(n => n.type === "promise") ?? null;
+    const peeking = peekNotification !== null && !!peekNotification.peek;
+
+    const handleLibrarySelect = (libraryId: string) => {
+        selectLibraryById(libraryId);
+        setIsLibraryPanelOpen(false);
+    };
+
+    function handleCreateLibrary() {
+        setIsLibraryPanelOpen(false);
+        setOpenCreateLibrary(true);
+    }
+
+    async function handleAddLibrary() {
+        setIsLibraryPanelOpen(false);
+        await selectExistingLibrary();
+    }
+
+    useEffect(() => {
+        toast.dismiss();
+    }, [isOpen]);
+
     return (
         <div className="w-full h-12 min-h-12 pl-26 pr-1.5 flex justify-between items-center app-drag-region">
             {!location.pathname.startsWith("/onboarding") && (
@@ -87,6 +125,7 @@ export function Framebar({ libraries }: { libraries: Library[] }) {
                 </>
             )}
             <CreateLibraryDialog open={openCreateLibrary} onOpenChange={setOpenCreateLibrary} />
+            <AddLibraryDialog library={libraryToAdd} open={isAddLibraryOpen} onOpenChange={setIsAddLibraryOpen} />
         </div>
     );
 }

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { toast } from "sonner";
+import { toast } from "@project-chroma/ui/sonner";
 import type { Notification, NotificationType } from "@project-chroma/contracts/gallery";
 import type { Result } from "@project-chroma/utils";
 
@@ -91,16 +91,16 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
         if (!isOpen) setHasUnread(true);
 
         if (type === "info") {
-            if (!isOpen) toast.info(title, description ? { description } : undefined);
+            if (!isOpen) toast.info({ title, description });
             console.log("[INFO] " + title + " - " + description);
         } else if (type === "success") {
-            if (!isOpen) toast.success(title, description ? { description } : undefined);
+            if (!isOpen) toast.success({ title, description });
             console.log("[SUCC] " + title + " - " + description);
         } else if (type === "error") {
-            if (!isOpen) toast.error(title, description ? { description } : undefined);
+            if (!isOpen) toast.error({ title, description });
             console.log("[ERRO] " + title + " - " + description);
         } else if (type === "warning") {
-            if (!isOpen) toast.warning(title, description ? { description } : undefined);
+            if (!isOpen) toast.warning({ title, description });
             console.log("[WARN] " + title + " - " + description);
         } else if (type === "promise") {
             console.log("[PROM] " + title + " - " + description);
@@ -116,7 +116,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                     }
 
                     const currentIsOpen = get().isOpen;
-                    if (!currentIsOpen) toast.error(data.title, data.description ? { description: data.description } : undefined);
+                    if (!currentIsOpen) toast.error({ title: data.title, description: data.description });
                     console.log("[ERRO] " + data.title + " - " + data.description);
 
                     onError?.(e);
@@ -131,7 +131,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                             get().updateNoti(id, { type: "success", ...override });
 
                             const currentIsOpen = get().isOpen;
-                            if (!currentIsOpen) toast.success(data.title, data.description ? { description: data.description } : undefined);
+                            if (!currentIsOpen) toast.success({ title: data.title, description: data.description });
                             console.log("[SUCC] " + data.title + " - " + data.description);
 
                             onSuccess?.(e.data);

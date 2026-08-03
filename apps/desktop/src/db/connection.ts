@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import { Errors, Result } from "@project-chroma/utils";
+import { Errors, isResult, Result } from "@project-chroma/utils";
 
 export type ChromaDB = Database.Database;
 
@@ -22,14 +22,19 @@ export function openConnection(root: string): Result<ChromaDB> {
     return Result.accept(createConnection(dbPath));
 }
 
-export function withDatabase<TResult>(root: string, callback: (db: ChromaDB) => TResult): Result<TResult> {
+type WithDatabaseResult<T> = T extends Result<any> ? T : Result<T>;
+
+export function withDatabase<TResult>(root: string, callback: (db: ChromaDB) => TResult): WithDatabaseResult<TResult> {
     const db = openConnection(root);
 
     if (db.success) {
         try {
-            return Result.accept(callback(db.data));
+            const call = callback(db.data);
+
+            if (isResult(call)) return call as WithDatabaseResult<TResult>;
+            else return Result.accept(call) as WithDatabaseResult<TResult>;
         } finally {
             db.data.close();
         }
-    } else return db;
+    } else return db as WithDatabaseResult<TResult>;
 }

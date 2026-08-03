@@ -13,9 +13,12 @@
         "@project-chroma/utils": "workspace:*",
         "better-sqlite3": "^12.5.0",
         "electron": "^39.2.7",
+        "piscina": "^5.2.0",
         "sharp": "^0.34.5",
+        "uuid": "^13.0.0"
     },
     "devDependencies": {
+        "@electron/rebuild": "^4.0.1",
         "@types/better-sqlite3": "^7.6.13",
         "@types/node": "catalog:",
         "tsdown": "^0.22.0"

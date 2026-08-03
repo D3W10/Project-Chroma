@@ -23,6 +23,7 @@
         "tw-animate-css": "catalog:"
     },
     "devDependencies": {
+        "@project-chroma/contracts": "workspace:*",
         "@types/node": "catalog:",
         "@types/react": "catalog:",
         "@types/react-dom": "catalog:",

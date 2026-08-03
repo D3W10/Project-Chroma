@@ -1,13 +1,14 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { cpus } from "node:os";
+import sharp from "sharp";
 import { Piscina } from "piscina";
 import { ipc } from "@project-chroma/contracts/ipc";
 import { Errors, extToMime, Result, type AppError } from "@project-chroma/utils";
 import { registerHandle } from "./ipc.ts";
 import * as utils from "./utils.ts";
 import * as DB from "../db/index.ts";
-import type { Group, ImportItem, Item, Library } from "@project-chroma/contracts/gallery";
+import type { ConflictGroup, ImportItem, Item, Library } from "@project-chroma/contracts/gallery";
 import type { ConfigStore } from "../lib/config.ts";
 import type { PrepareItemProps } from "../workers/prepareItem.worker.ts";
 
@@ -74,9 +75,9 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
         return DB.withDatabase(lib.path, db => DB.items.getAllItems(db));
     });
     registerHandle(ipc.ITEMS_VERIFY_CONFLICTS, async (_, { sourcePaths, checkLivePhotos, parseEdits }) => {
-        const groups = new Map<string, Group>();
+        const groups = new Map<string, ConflictGroup>();
 
-        const emptyGroup = (): Group => ({
+        const emptyGroup = (): ConflictGroup => ({
             originalItems: [],
             editedItems: [],
             originalVideos: [],
@@ -145,7 +146,7 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
         }
 
         const itemsToImport: ImportItem[] = [];
-        const conflicts: Group[] = [];
+        const conflicts: ConflictGroup[] = [];
 
         for (const group of groups.values()) {
             if (group.originalItems.length > 1 || group.editedItems.length > 1 || group.originalVideos.length > 1 || group.editedVideos.length > 1) {
