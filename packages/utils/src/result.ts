@@ -5,6 +5,7 @@ export type ResultAccepted<T> = { success: true; data: T; error: null };
 export type ResultRejected<E = AppError> = { success: false; data: null; error: E };
 
 function rejectResult<E = AppError>(error: E): Result<never, E> {
+    console.log("[ERRO]", error);
     if (isAppError(error)) {
         return { success: false, data: null, error };
     }

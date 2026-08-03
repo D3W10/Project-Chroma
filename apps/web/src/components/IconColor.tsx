@@ -6,7 +6,7 @@ const iconColorVariants = cva("flex justify-center items-center bg-(--lib-color)
         size: {
             sm: "size-6 text-sm rounded-sm ring-2",
             md: "size-8 text-md rounded-sm ring-2",
-            lg: "size-10 text-lg rounded-md ring-3",
+            lg: "size-10 text-xl rounded-md ring-3",
             xl: "size-12 text-xl rounded-lg ring-3",
             "2xl": "size-22 text-5xl rounded-xl ring-4",
         },

@@ -35,7 +35,12 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
 
         return DB.withDatabase(lib.path, db => DB.library.checkVersionState(db));
     });
-    registerHandle(ipc.LIBRARY_GET_INFO_FROM_PATH, (_, { path: rootPath }) => DB.withDatabase(rootPath, db => ({ ...DB.library.fetchInfo(db), path: rootPath })));
+    registerHandle(ipc.LIBRARY_GET_INFO_FROM_PATH, (_, { path: rootPath }) => {
+        const info = DB.withDatabase(rootPath, DB.library.fetchInfo);
+        if (!info.success) return Result.reject(info.error);
+
+        return { ...info.data, path: rootPath };
+    });
     registerHandle(ipc.LIBRARY_CREATE, async (_, { name, color, icon, path: rootPath }) => {
         await fs.mkdir(rootPath, { recursive: true });
         const db = DB.createConnection(path.join(rootPath, "lib.db"));
@@ -54,6 +59,21 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
             name: name,
             icon: icon,
             color: color,
+            path: rootPath,
+        } satisfies Library;
+        await config.set({ libraries: [...(await getConfig()).libraries, lib] });
+
+        return lib;
+    });
+    registerHandle(ipc.LIBRARY_ADD, async (_, { path: rootPath }) => {
+        const info = DB.withDatabase(rootPath, DB.library.fetchInfo);
+        if (!info.success) return Result.reject(info.error);
+
+        const lib = {
+            id: crypto.randomUUID(),
+            name: info.data.name,
+            icon: info.data.icon,
+            color: info.data.color,
             path: rootPath,
         } satisfies Library;
         await config.set({ libraries: [...(await getConfig()).libraries, lib] });

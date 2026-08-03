@@ -1,4 +1,5 @@
 import type { ChromaDB } from "./connection.ts";
+
 export const SCHEMA_VERSION = 0 as const;
 
 export function createSchema(db: ChromaDB) {
@@ -8,7 +9,7 @@ export function createSchema(db: ChromaDB) {
                 name TEXT NOT NULL,
                 icon TEXT NOT NULL,
                 color TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                createdAt TEXT NOT NULL
             );
     
             CREATE TABLE IF NOT EXISTS item (

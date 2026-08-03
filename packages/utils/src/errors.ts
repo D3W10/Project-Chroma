@@ -26,7 +26,14 @@ function buildAppError(args: AppError) {
     return {
         ...args,
         [Symbol.toPrimitive]() {
-            return `${args.title}: ${args.message}`;
+            const details = args.details
+                ? "\n" +
+                  Object.entries(args.details)
+                      .map(([key, value]) => `${key}: ${value}`)
+                      .join(", ")
+                : "";
+
+            return `(${args.code}) ${args.title}: ${args.message}${details}`;
         },
     };
 }

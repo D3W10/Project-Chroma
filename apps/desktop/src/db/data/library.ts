@@ -26,5 +26,5 @@ export function fetchInfo(db: ChromaDB): Result<LibraryMetadata> {
 }
 
 export function fillMetadata(db: ChromaDB, name: string, icon: string, color: string): void {
-    db.prepare("INSERT INTO library (name, icon, color, created_at) VALUES (?, ?, ?, ?)").run(name, icon, color, new Date().toISOString());
+    db.prepare("INSERT INTO library (name, icon, color, createdAt) VALUES (?, ?, ?, ?)").run(name, icon, color, new Date().toISOString());
 }

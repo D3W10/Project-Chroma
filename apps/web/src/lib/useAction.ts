@@ -1,30 +1,69 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useLibrary } from "@/lib/useLibrary";
 import { useMutationSafe } from "@/lib/useMutationSafe";
+import { useNotifications } from "@/lib/useNotifications";
+
+export function useAction() {
     const { libraries, selectedLibrary, setLibraries, selectLibraryById } = useLibrary();
+    const { pushNoti } = useNotifications();
     const queryClient = useQueryClient();
+
+
     const removeLibrary = useMutationSafe({
         mutationFn: (opts: { libraryId: string }) => window.chroma!.library.remove(opts),
         onSuccess: (_, data) => setLibraries(libraries.filter(lib => lib.id !== data.libraryId)),
     });
+    const setItemsFavorite = useMutationSafe({
+        mutationFn: (opts: { libraryId: string; itemIds: string[]; value: boolean }) => window.chroma!.items.setItemsFavorite(opts),
+        onSuccess: (_, vars) =>
+            syncItems(vars.libraryId, items =>
+                items.map(i => {
+                    if (vars.itemIds.includes(i.id)) return { ...i, isFavorite: vars.value };
+                    return i;
+                }),
+            ),
     });
         createLibrary: (name: string, icon: string, color: string, path: string, onSuccess?: () => void) => {
             if (!window.chroma) return;
 
             pushNoti({
                 title: "Creating library",
-                description: 'Library "' + name + '" is being created...',
+                description: `Library "${name}" is being created...`,
                 type: "promise",
                 promise: window.chroma.library.create({ name, icon, color, path }),
                 peek: "Creating library",
-                success: d => ({
+                success: () => ({
                     title: "Library created",
-                    description: 'The library "' + d.name + '" was created successfully!',
+                    description: `The library "${name}" was created successfully!`,
                 }),
-                error: _ => ({
+                error: () => ({
                     title: "Error creating library",
                     description: "An error occurred while creating the library",
                 }),
+                onSuccess: async d => {
+                    await selectLibraryById(d.id);
+                    onSuccess?.();
+                },
+            });
+        },
+        addLibrary: (name: string, path: string, onSuccess?: () => void, onError?: () => void) => {
+            if (!window.chroma) return;
+
+            pushNoti({
+                title: "Adding library",
+                description: `Library "${name}" is being added...`,
+                type: "promise",
+                promise: window.chroma.library.add({ path }),
+                peek: "Adding library",
+                success: () => ({
+                    title: "Library added",
+                    description: `The library "${name}" was added successfully!`,
+                }),
+                error: () => ({
+                    title: "Error adding library",
+                    description: "An error occurred while adding the library",
+                }),
+                onError,
                 onSuccess: async d => {
                     await selectLibraryById(d.id);
                     onSuccess?.();
@@ -39,6 +78,10 @@ import { useMutationSafe } from "@/lib/useMutationSafe";
 
             setLibraries(rest);
             await selectLibraryById(rest.length >= idx + 1 ? rest[idx].id : rest.length > 0 ? rest[idx - 1].id : null);
+        },
+        setItemsFavorite: (itemIds: string[], value: boolean) => {
+            if (!selectedLibrary || !itemIds.length) return;
+            return setItemsFavorite.mutateAsync({ libraryId: selectedLibrary.id, itemIds, value });
         },
             if (!selectedLibrary) return;
             return removeLibrary.mutateAsync({ libraryId: selectedLibrary.id });

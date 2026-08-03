@@ -1,38 +1,32 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
-import { IconColor } from "@/components/custom/IconColor";
-import { addLibrary } from "@/lib/invoker";
-import { useLibrary } from "@/lib/useLibrary";
-import { useNotifications } from "@/lib/useNotifications";
-import type { LibraryDetailsPath } from "@/lib/models";
+import { Button } from "@project-chroma/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@project-chroma/ui/dialog";
+import { Spinner } from "@project-chroma/ui/spinner";
+import { IconColor } from "@/components/IconColor";
+import { useAction } from "@/lib/useAction";
+import type { LibraryMetadataPath } from "@project-chroma/contracts/gallery";
 
 interface AddLibraryDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    library?: LibraryDetailsPath;
+    library?: LibraryMetadataPath;
+    onAdded?: () => void;
 }
 
-export function AddLibraryDialog({ library, open, onOpenChange }: AddLibraryDialogProps) {
+export function AddLibraryDialog({ library, open, onOpenChange, onAdded }: AddLibraryDialogProps) {
     const [isProcessing, setIsProcessing] = useState(false);
-    const { selectLibraryById } = useLibrary();
-    const { pushNoti } = useNotifications();
+    const { addLibrary } = useAction();
 
     async function handleAdd() {
         if (!library) return;
 
         setIsProcessing(true);
 
-        const { ok, data } = await addLibrary({ path: library.path });
-        if (ok) {
-            await selectLibraryById(data.id);
-            pushNoti("Library added", "The library \"" + library.name + "\" was added successfully!", "success");
+        addLibrary(library.name, library.path, () => {
             onOpenChange(false);
-        } else
-            pushNoti("Add error", "Failed to add the existing library", "error");
-
-        setIsProcessing(false);
+            onAdded?.();
+            setIsProcessing(false);
+        }, () => setIsProcessing(false));
     }
 
     return (
@@ -43,18 +37,22 @@ export function AddLibraryDialog({ library, open, onOpenChange }: AddLibraryDial
                     <DialogDescription>The following library will be imported to Project Chroma</DialogDescription>
                 </DialogHeader>
                 {library && (
-                    <div className="w-full p-3 flex items-center gap-3.5 bg-muted/40 rounded-xl ring-1 ring-input">
+                    <div className="w-full p-4 flex items-center gap-4 bg-muted/40 rounded-xl ring-1 ring-input">
                         <IconColor color={library.color} size="lg">
                             {library.icon}
                         </IconColor>
                         <div className="space-y-0.5">
                             <h3 className="font-semibold">{library.name}</h3>
-                            <p className="text-xs text-muted-foreground">{library.count} {library.count === 1 ? "item" : "items"}</p>
+                            <p className="text-2xs text-muted-foreground">
+                                {library.count} {library.count === 1 ? "item" : "items"}
+                            </p>
                         </div>
                     </div>
                 )}
                 <DialogFooter>
-                    <Button variant="outline" disabled={isProcessing} onClick={() => onOpenChange(false)}>Cancel</Button>
+                    <Button variant="outline" disabled={isProcessing} onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
                     <Button className="flex justify-center relative" onClick={handleAdd} disabled={!library || isProcessing}>
                         <span className={isProcessing ? "opacity-0" : ""}>Add Library</span>
                         <Spinner className={`absolute ${!isProcessing ? "opacity-0" : "opacity-100"}`} />

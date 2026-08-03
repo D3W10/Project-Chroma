@@ -106,3 +106,7 @@ export interface LibraryMetadata {
     count: number;
     createdAt: string;
 }
+
+export interface LibraryMetadataPath extends LibraryMetadata {
+    path: string;
+}

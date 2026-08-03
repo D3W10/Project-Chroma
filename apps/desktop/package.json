@@ -6,7 +6,13 @@
     "main": "dist-electron/main.cjs",
     "scripts": {
         "build": "tsdown",
+        "rebuild": "electron-rebuild -f -w better-sqlite3",
         "start": "electron .",
+        "build": "tsdown",
+        "rebuild": "bun run rebuild:electron && bun run rebuild:sharp",
+        "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
+        "rebuild:sharp": "cd ./node_modules/sharp && bun run build",
+        "typecheck": "tsc -p tsconfig.json --noEmit"
     },
     "dependencies": {
         "@project-chroma/contracts": "workspace:*",
@@ -14,7 +20,7 @@
         "better-sqlite3": "^12.5.0",
         "electron": "^39.2.7",
         "piscina": "^5.2.0",
-        "sharp": "^0.34.5",
+        "sharp": "^0.35.3",
         "uuid": "^13.0.0"
     },
     "devDependencies": {

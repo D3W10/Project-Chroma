@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { IconChevronLeft, IconChevronRight, IconHelpCircle, IconMinus, IconPhotoVideo, IconPlus } from "@tabler/icons-react";
 import { Button } from "@project-chroma/ui/button";
 import { Checkbox } from "@project-chroma/ui/checkbox";
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@project-chroma/ui/dialog";
+import { Spinner } from "@project-chroma/ui/spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@project-chroma/ui/tooltip";
 import { extToMime, uint8ToBase64 } from "@project-chroma/utils";
 import { DialogPaged, useDialogPaged } from "@/components/DialogPaged";
@@ -28,6 +31,65 @@ export function ImportItemsDialog({ open, onOpenChange }: ImportItemsDialogProps
     const { selectedLibrary } = useLibrary();
     const queryClient = useQueryClient();
     const { progressNoti, pushNoti } = useNotifications();
+
+    async function handleImportRequest(setPage: (page: string) => unknown) {
+        if (!selectedLibrary) return;
+
+        const { data: result, error } = await window.chroma!.items.verifyConflicts({
+            sourcePaths: selectedItems,
+            checkLivePhotos: livePhotos,
+            parseEdits: edits,
+        });
+
+        if (error || !result) {
+            pushNoti({
+                title: "Scan Error",
+                description: "Failed to scan files",
+                type: "error",
+            });
+            return;
+        }
+
+        setDeleteImported(deleteImported);
+
+        if (result.conflicts.length > 0) {
+            setFinalItems(result.itemsToImport);
+            setConflicts(result.conflicts);
+            setPage("conflicts");
+        } else importItems(result.itemsToImport);
+    }
+
+    async function importItems(items: ImportItem[]) {
+        if (!selectedLibrary || !window.chroma) return;
+
+        updateSettings({
+            importOptions: {
+                livePhotos,
+                edits,
+            },
+        });
+        onOpenChange(false);
+
+        const promise = window.chroma.items.addItems({ libraryId: selectedLibrary.id, items, deleteSource: deleteImported });
+        const importNoti = pushNoti({
+            title: "Importing items",
+            description: `Importing ${items.length} items`,
+            type: "promise",
+            promise,
+            hasProgress: true,
+            peek: `Importing ${items.length} items`,
+            success: () => ({ title: "Import success", description: `${items.length} items added successfully` }),
+            error: e => ({ title: "Error importing", description: "An error occurred while importing the selected items: " + e }),
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "items"] }),
+        });
+
+        const unlisten = window.chroma.on<number>("import-progress", payload => {
+            progressNoti(importNoti, payload / items.length);
+        });
+
+        promise.finally(unlisten);
+    }
+
     return (
         <DialogPaged
             pages={{
