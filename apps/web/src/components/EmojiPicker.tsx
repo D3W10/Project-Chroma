@@ -43,14 +43,14 @@ export function EmojiPicker({ className, disabled, options, emoji, onEmojiSelect
     }
 
     return (
-        <div className={cn("flex justify-between", className)} {...props}>
+        <div className={cn("flex justify-between gap-2", className)} {...props}>
             {Array.from({ length: 6 }).map((_, i) => (
                 <EmojiOption key={i} current={emoji} emoji={options[i]} disabled={disabled} onEmojiSelect={emojiSelected} />
             ))}
             <Input
                 type="text"
                 value={customEmoji ? emoji : ""}
-                className="size-14 p-1 text-2xl! text-center placeholder:opacity-20 focus-visible:placeholder:opacity-0"
+                className="h-auto p-0 flex-1 text-xl! text-center placeholder:opacity-20 focus-visible:placeholder:opacity-0"
                 placeholder="📁"
                 maxLength={4}
                 disabled={disabled}
@@ -73,7 +73,14 @@ function EmojiOption({
     onEmojiSelect: (emoji: string) => unknown;
 }) {
     return (
-        <Button variant="secondary" size="icon" className={cn("size-14 text-2xl", current === emoji ? "ring-2 ring-primary" : "")} disabled={disabled} onClick={() => onEmojiSelect(emoji)} {...rest}>
+        <Button
+            variant="secondary"
+            size="icon"
+            className={cn("h-auto flex-1 text-xl aspect-square", current === emoji ? "ring-2 ring-primary" : "")}
+            disabled={disabled}
+            onClick={() => onEmojiSelect(emoji)}
+            {...rest}
+        >
             {emoji}
         </Button>
     );

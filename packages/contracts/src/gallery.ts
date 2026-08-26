@@ -36,7 +36,7 @@ export interface ItemAlbumRef extends Item {
 export interface Album {
     id: string;
     name: string;
-    description: string;
+    description?: string;
     parent?: string;
     selectedCover: number;
     selectedBanner: number;

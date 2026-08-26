@@ -42,6 +42,10 @@ const chromaBridge = {
         exportItems: options => invoke(ipc.ITEMS_EXPORT, options),
         transferItems: options => invoke(ipc.ITEMS_TRANSFER, options),
     },
+    albums: {
+        get: options => invoke(ipc.ALBUMS_GET, options),
+        create: options => invoke(ipc.ALBUMS_CREATE, options),
+    },
     other: {
         genQuickThumb: options => invoke(ipc.GEN_QUICK_THUMB, options),
     },

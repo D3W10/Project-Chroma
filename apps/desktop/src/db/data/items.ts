@@ -3,13 +3,13 @@ import { boolToInt, type DbRow } from "../types.ts";
 import type { Item, ItemSearchMatch, Tag, TagItemRef } from "@project-chroma/contracts/gallery";
 import type { ChromaDB } from "../connection.ts";
 
-export function getAllItems(db: ChromaDB): Item[] {
+export function getAll(db: ChromaDB): Item[] {
     const orderColumn = hasColumn(db, "item", "takenDate") ? "takenDate" : "taken_date";
     return (db.prepare(`SELECT * FROM item ORDER BY ${orderColumn} DESC`).all() as DbRow[]).map(rowToItem);
 }
 
-export function addItems(db: ChromaDB, items: Item[]) {
-    db.transaction(items => {
+export function add(db: ChromaDB, items: Item[]) {
+    db.transaction((items: Item[]) => {
         for (const item of items) {
             db.prepare(`INSERT INTO item (
                 id,

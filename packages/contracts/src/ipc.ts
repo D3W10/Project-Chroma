@@ -24,6 +24,8 @@ export const ipc = {
     ITEMS_TRANSFER: "chroma:items:transfer",
     ITEMS_EXPORT: "chroma:items:export",
     ITEMS_DELETE: "chroma:items:delete",
+    ALBUMS_GET: "chroma:albums:get",
+    ALBUMS_CREATE: "chroma:albums:create",
     GEN_QUICK_THUMB: "chroma:gen-quick-thumb",
 } as const;
 
@@ -53,6 +55,8 @@ export type ChromaIpcMap = {
     [ipc.ITEMS_TRANSFER]: (options: { sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }) => void;
     [ipc.ITEMS_EXPORT]: (options: { libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }) => void;
     [ipc.ITEMS_DELETE]: (options: { libraryId: string; itemIds: string[] }) => void;
+    [ipc.ALBUMS_GET]: (options: { libraryId: string; parent?: string }) => AlbumComp[];
+    [ipc.ALBUMS_CREATE]: (options: { libraryId: string; album: Omit<Album, "id"> }) => void;
     [ipc.GEN_QUICK_THUMB]: (options: { path: string }) => Uint8Array | undefined;
 };
 
@@ -83,6 +87,10 @@ const bridgeSchema = {
         transferItems: ipc.ITEMS_TRANSFER,
         exportItems: ipc.ITEMS_EXPORT,
         deleteItems: ipc.ITEMS_DELETE,
+    },
+    albums: {
+        get: ipc.ALBUMS_GET,
+        create: ipc.ALBUMS_CREATE,
     },
     other: {
         genQuickThumb: ipc.GEN_QUICK_THUMB,

@@ -106,8 +106,8 @@ export function optional<T extends object>(item: ValuesToUnknown<Partial<T>>): P
     return Object.values(item).some(v => v !== undefined) ? (item as T) : undefined;
 }
 
-export function sqlify(obj: Record<string, unknown>): Record<string, unknown> {
-    const clean = { ...obj };
+export function sqlify(obj: object): Record<string, unknown> {
+    const clean = { ...obj } as Record<string, unknown>;
 
     for (const key of Object.keys(clean)) {
         if (typeof clean[key] === "boolean") clean[key] = clean[key] ? 1 : 0;

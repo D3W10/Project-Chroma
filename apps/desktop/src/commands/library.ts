@@ -3,6 +3,7 @@ import path from "node:path";
 import { cpus } from "node:os";
 import sharp from "sharp";
 import { Piscina } from "piscina";
+import { v4 as uuidv4 } from "uuid";
 import { ipc } from "@project-chroma/contracts/ipc";
 import { Errors, extToMime, Result, type AppError } from "@project-chroma/utils";
 import { registerHandle } from "./ipc.ts";
@@ -92,7 +93,7 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
         const lib = await getLib(libraryId);
         if (!lib) return Result.reject(Errors.libraryNotFound());
 
-        return DB.withDatabase(lib.path, db => DB.items.getAllItems(db));
+        return DB.withDatabase(lib.path, db => DB.items.getAll(db));
     });
     registerHandle(ipc.ITEMS_VERIFY_CONFLICTS, async (_, { sourcePaths, checkLivePhotos, parseEdits }) => {
         const groups = new Map<string, ConflictGroup>();
@@ -225,6 +226,24 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
 
         return DB.withDatabase(lib.path, db => DB.items.setFavoriteState(db, itemIds, value));
     });
+
+    // Albums
+
+    registerHandle(ipc.ALBUMS_GET, async (_, { libraryId, parent }) => {
+        const lib = await getLib(libraryId);
+        if (!lib) return Result.reject(Errors.libraryNotFound());
+
+        return DB.withDatabase(lib.path, db => DB.albums.getFromParent(db, parent));
+    });
+    registerHandle(ipc.ALBUMS_CREATE, async (_, { libraryId, album }) => {
+        const lib = await getLib(libraryId);
+        if (!lib) return Result.reject(Errors.libraryNotFound());
+
+        return DB.withDatabase(lib.path, db => DB.albums.add(db, { id: uuidv4(), ...album }));
+    });
+
+    // Other
+
     registerHandle(ipc.GEN_QUICK_THUMB, async (_, { path }) => {
         const image = sharp(await fs.readFile(path));
         const thumb = await utils.generateImageThumbnail(image, { size: 48 });

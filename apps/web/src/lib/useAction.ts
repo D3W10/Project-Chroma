@@ -23,6 +23,10 @@ export function useAction() {
                 }),
             ),
     });
+    const createAlbum = useMutationSafe({
+        mutationFn: (opts: { libraryId: string; name: string; description?: string; parent?: string; color: string; icon: string }) => window.chroma!.albums.create(opts),
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] }),
+    });
         createLibrary: (name: string, icon: string, color: string, path: string, onSuccess?: () => void) => {
             if (!window.chroma) return;
 
@@ -82,6 +86,17 @@ export function useAction() {
         setItemsFavorite: (itemIds: string[], value: boolean) => {
             if (!selectedLibrary || !itemIds.length) return;
             return setItemsFavorite.mutateAsync({ libraryId: selectedLibrary.id, itemIds, value });
+        },
+        createAlbum: (name: string, parent: string | undefined, color: string, icon: string) => {
+            if (!selectedLibrary) return;
+            return createAlbum.mutateAsync({
+                libraryId: selectedLibrary.id,
+                name,
+                description: "",
+                parent,
+                color,
+                icon,
+            });
         },
             if (!selectedLibrary) return;
             return removeLibrary.mutateAsync({ libraryId: selectedLibrary.id });
