@@ -2,6 +2,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLibrary } from "@/lib/useLibrary";
 import { useMutationSafe } from "@/lib/useMutationSafe";
 import { useNotifications } from "@/lib/useNotifications";
+import type { ChromaIpcMap } from "@project-chroma/contracts/ipc";
+
+type Params<T extends keyof ChromaIpcMap> = Parameters<ChromaIpcMap[T]>[0];
 
 export function useAction() {
     const { libraries, selectedLibrary, setLibraries, selectLibraryById } = useLibrary();
@@ -10,11 +13,11 @@ export function useAction() {
 
 
     const removeLibrary = useMutationSafe({
-        mutationFn: (opts: { libraryId: string }) => window.chroma!.library.remove(opts),
+        mutationFn: (opts: Params<"chroma:library:remove">) => window.chroma!.library.remove(opts),
         onSuccess: (_, data) => setLibraries(libraries.filter(lib => lib.id !== data.libraryId)),
     });
     const setItemsFavorite = useMutationSafe({
-        mutationFn: (opts: { libraryId: string; itemIds: string[]; value: boolean }) => window.chroma!.items.setItemsFavorite(opts),
+        mutationFn: (opts: Params<"chroma:items:set-favorite">) => window.chroma!.items.setItemsFavorite(opts),
         onSuccess: (_, vars) =>
             syncItems(vars.libraryId, items =>
                 items.map(i => {
@@ -24,8 +27,20 @@ export function useAction() {
             ),
     });
     const createAlbum = useMutationSafe({
-        mutationFn: (opts: { libraryId: string; name: string; description?: string; parent?: string; color: string; icon: string }) => window.chroma!.albums.create(opts),
-        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] }),
+        mutationFn: (opts: Params<"chroma:albums:create">) => window.chroma!.albums.create(opts),
+        onSuccess: (_, vars) => queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.album.parent] }),
+    });
+    const addItemsToAlbum = useMutationSafe({
+        mutationFn: (opts: Params<"chroma:albums:add-items">) =>
+            window.chroma!.albums.addItems({
+                libraryId: opts.libraryId,
+                albumId: opts.albumId,
+                itemIds: opts.itemIds,
+            }),
+        onSuccess: (_, vars) => {
+            queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.albumId, "items"] });
+            queryClient.invalidateQueries({ queryKey: [vars.libraryId, "albums", vars.parent] });
+        },
     });
         createLibrary: (name: string, icon: string, color: string, path: string, onSuccess?: () => void) => {
             if (!window.chroma) return;

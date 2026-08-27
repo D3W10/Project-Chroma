@@ -45,6 +45,7 @@ const chromaBridge = {
     albums: {
         get: options => invoke(ipc.ALBUMS_GET, options),
         create: options => invoke(ipc.ALBUMS_CREATE, options),
+        getItems: options => invoke(ipc.ALBUMS_GET_ITEMS, options),
     },
     other: {
         genQuickThumb: options => invoke(ipc.GEN_QUICK_THUMB, options),

@@ -1,5 +1,6 @@
 import { optional, sqlify } from "../schema.ts";
-import type { Album, AlbumComp } from "@project-chroma/contracts/gallery";
+import { rowToItem } from "./items.ts";
+import type { Album, AlbumComp, ItemAlbumRef } from "@project-chroma/contracts/gallery";
 import type { ChromaDB } from "../connection.ts";
 import type { DbRow } from "../types.ts";
 
@@ -31,7 +32,7 @@ export function getFromParent(db: ChromaDB, parent?: string | null): AlbumComp[]
 }
 
 export function add(db: ChromaDB, album: Album) {
-    db.prepare(`INSERT INTO item (
+    db.prepare(`INSERT INTO album (
         id,
         name,
         description,
@@ -58,7 +59,20 @@ export function add(db: ChromaDB, album: Album) {
     )`).run(sqlify(album));
 }
 
-function rowToAlbum(row: DbRow): AlbumComp {
+export function getItems(db: ChromaDB, albumId: string): ItemAlbumRef[] {
+    const rows = db
+        .prepare(`
+            SELECT i.*, ai.addedAt AS addedAt
+            FROM item i
+            INNER JOIN album_item ai ON i.id = ai.itemId
+            WHERE ai.albumId = ?
+            ORDER BY i.takenDate DESC
+        `)
+        .all(albumId) as DbRow[];
+    return rows.map(rowToAlbumItem);
+}
+
+export function rowToAlbum(row: DbRow): AlbumComp {
     let peekThumbs: string[] = [];
     if (typeof row.peek_thumbs === "string") {
         try {
@@ -84,5 +98,12 @@ function rowToAlbum(row: DbRow): AlbumComp {
         createdAt: String(row.createdAt),
         size: Number(row.size ?? 0),
         peekThumbs,
+    };
+}
+
+export function rowToAlbumItem(row: DbRow): ItemAlbumRef {
+    return {
+        ...rowToItem(row),
+        addedAt: String(row.addedAt),
     };
 }

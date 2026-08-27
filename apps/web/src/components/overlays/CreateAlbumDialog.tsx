@@ -48,7 +48,18 @@ function CreateAlbumDialogBody({ currentAlbum, onOpenChange, onSuccess }: Omit<C
         try {
             if (!selectedLibrary) return;
 
-            const data = await action.createAlbum(albumName, currentAlbum, albumColor, albumEmoji);
+            const data = await action.createAlbum({
+                name: albumName,
+                description: "",
+                parent: currentAlbum,
+                selectedCover: 0,
+                selectedBanner: 0,
+                icon: albumEmoji,
+                color: albumColor,
+                coverPhoto: undefined,
+                bannerPhoto: undefined,
+                createdAt: new Date().toISOString(),
+            });
             if (data) onSuccess?.(data);
         } finally {
             setIsProcessing(false);

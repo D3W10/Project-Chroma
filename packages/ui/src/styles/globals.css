@@ -27,6 +27,7 @@
     --color-accent-foreground: var(--accent-foreground);
 
     --color-destructive: var(--color-watermelon);
+    --color-destructive-foreground: color-mix(in oklch, var(--color-foreground), var(--color-watermelon) 80%);
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--color-sky-aqua);

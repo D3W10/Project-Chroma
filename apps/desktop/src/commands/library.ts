@@ -241,6 +241,12 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
 
         return DB.withDatabase(lib.path, db => DB.albums.add(db, { id: uuidv4(), ...album }));
     });
+    registerHandle(ipc.ALBUMS_GET_ITEMS, async (_, { libraryId, albumId }) => {
+        const lib = await getLib(libraryId);
+        if (!lib) return Result.reject(Errors.libraryNotFound());
+
+        return DB.withDatabase(lib.path, db => DB.albums.getItems(db, albumId));
+    });
 
     // Other
 
