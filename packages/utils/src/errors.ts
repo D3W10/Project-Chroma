@@ -1,13 +1,4 @@
-import errorCodes from "./errorCodes.ts";
-
-export type AppError = {
-    code: ErrorCode;
-    title: string;
-    message?: string;
-    details?: { [key: string]: unknown };
-};
-
-export type ErrorCode = (typeof errorCodes)[number];
+import { errorCodes, type AppError, type ErrorCode } from "@project-chroma/core";
 
 export const Errors = {
     libraryNotFound: createAppErrorRes("library:not-found", "Library not found", "No library was found at the specified location."),

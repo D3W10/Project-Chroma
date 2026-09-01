@@ -1,3 +1,4 @@
+import { ensureAlbumProps } from "@project-chroma/utils";
 import { optional, sqlify } from "../schema.ts";
 import { rowToItem } from "./items.ts";
 import type { Album, AlbumComp, ItemAlbumRef } from "@project-chroma/contracts/gallery";
@@ -56,7 +57,7 @@ export function add(db: ChromaDB, album: Album) {
         @coverPhoto,
         @bannerPhoto,
         @createdAt
-    )`).run(sqlify(album));
+    )`).run(sqlify(ensureAlbumProps(album)));
 }
 
 export function getItems(db: ChromaDB, albumId: string): ItemAlbumRef[] {

@@ -20,12 +20,12 @@ function RouteComponent() {
     const { id } = Route.useParams();
     const queryClient = useQueryClient();
     const { isFetching: isFetchingAlbums, data: albums } = useQuerySafe({
-        queryKey: [selectedLibrary?.id, "albums", id],
+        queryKey: queryKeys.albums(selectedLibrary?.id, id),
         queryFn: () => window.chroma!.albums.get({ libraryId: selectedLibrary?.id ?? "", parent: id }),
         placeholderData: [],
     });
     const { isFetching: isFetchingItems, data: items } = useQuerySafe({
-        queryKey: [selectedLibrary?.id, "albums", id, "items"],
+        queryKey: queryKeys.albumItems(selectedLibrary?.id, id),
         queryFn: () => window.chroma!.albums.getItems({ libraryId: selectedLibrary?.id ?? "", albumId: id ?? "" }),
         placeholderData: [],
         enabled: !!id,

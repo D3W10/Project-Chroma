@@ -3,7 +3,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConfigStore } from "./lib/config.ts";
 import { registerIpcHandlers } from "./commands/ipc.ts";
+import { configureContentSecurityPolicy, registerChromaFileProtocol } from "./security.ts";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const isDev = Boolean(process.env.ELECTRON_START_URL);
+
 let mainWindow: BrowserWindow | null = null;
 
 protocol.registerSchemesAsPrivileged([
@@ -89,6 +93,8 @@ const config = createConfigStore({
 });
 app.whenReady()
     .then(() => {
+        configureContentSecurityPolicy(session.defaultSession, { isDev });
+        registerChromaFileProtocol(protocol, net);
         registerIpcHandlers({
             app,
             config,
@@ -96,6 +102,7 @@ app.whenReady()
         });
             getWindow: () => mainWindow,
         createWindow();
+    })
 app.on("window-all-closed", () => {
     if (process.platform !== "darwin") {
         app.quit();

@@ -30,12 +30,7 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
     // Library
 
     registerHandle(ipc.LIBRARY_GET, async () => (await getConfig()).libraries);
-    registerHandle(ipc.LIBRARY_CHECK_HEALTH, async (_, { libraryId }) => {
-        const lib = await getLib(libraryId);
-        if (!lib) return Result.reject(Errors.libraryNotFound());
-
-        return DB.withDatabase(lib.path, db => DB.library.checkVersionState(db));
-    });
+    registerHandle(ipc.LIBRARY_CHECK_HEALTH, (_, { libraryId }) => withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.library.checkVersionState(db))));
     registerHandle(ipc.LIBRARY_GET_INFO_FROM_PATH, (_, { path: rootPath }) => {
         const info = DB.withDatabase(rootPath, DB.library.fetchInfo);
         if (!info.success) return Result.reject(info.error);
@@ -89,12 +84,7 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
 
     // Items
 
-    registerHandle(ipc.ITEMS_GET, async (_, { libraryId }) => {
-        const lib = await getLib(libraryId);
-        if (!lib) return Result.reject(Errors.libraryNotFound());
-
-        return DB.withDatabase(lib.path, db => DB.items.getAll(db));
-    });
+    registerHandle(ipc.ITEMS_GET, async (_, { libraryId }) => withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.items.getAll(db))));
     registerHandle(ipc.ITEMS_VERIFY_CONFLICTS, async (_, { sourcePaths, checkLivePhotos, parseEdits }) => {
         const groups = new Map<string, ConflictGroup>();
 
@@ -230,20 +220,17 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
     // Albums
 
     registerHandle(ipc.ALBUMS_GET, async (_, { libraryId, parent }) => {
-        const lib = await getLib(libraryId);
-        if (!lib) return Result.reject(Errors.libraryNotFound());
-
-        return DB.withDatabase(lib.path, db => DB.albums.getFromParent(db, parent));
+        return withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.albums.getFromParent(db, parent)));
     });
     registerHandle(ipc.ALBUMS_CREATE, async (_, { libraryId, album }) => {
-        const lib = await getLib(libraryId);
-        if (!lib) return Result.reject(Errors.libraryNotFound());
-
-        return DB.withDatabase(lib.path, db => DB.albums.add(db, { id: uuidv4(), ...album }));
+        return withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.albums.add(db, { id: uuidv4(), ...album })));
     });
     registerHandle(ipc.ALBUMS_GET_ITEMS, async (_, { libraryId, albumId }) => {
-        const lib = await getLib(libraryId);
-        if (!lib) return Result.reject(Errors.libraryNotFound());
+        return withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.albums.getItems(db, albumId)));
+    });
+    registerHandle(ipc.ALBUMS_ADD_ITEMS, async (_, { libraryId, albumId, itemIds }) => {
+        return withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.albums.addItems(db, albumId, itemIds)));
+    });
 
         return DB.withDatabase(lib.path, db => DB.albums.getItems(db, albumId));
     });
@@ -257,3 +244,4 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
         if (!thumb) return Result.reject(Errors.missingSource());
         return thumb;
     });
+}

@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@project-chroma/ui/tool
 import { extToMime, uint8ToBase64 } from "@project-chroma/utils";
 import { DialogPaged, useDialogPaged } from "@/components/DialogPaged";
 import { IconBox } from "@/components/IconBox";
+import { pathToName, pathToStem, queryKeys } from "@/lib/utils";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { useQuerySafe } from "@/lib/useQuerySafe";
@@ -80,10 +81,10 @@ export function ImportItemsDialog({ open, onOpenChange }: ImportItemsDialogProps
             peek: `Importing ${items.length} items`,
             success: () => ({ title: "Import success", description: `${items.length} items added successfully` }),
             error: e => ({ title: "Error importing", description: "An error occurred while importing the selected items: " + e }),
-            onSuccess: () => queryClient.invalidateQueries({ queryKey: [selectedLibrary.id, "items"] }),
+            onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.items(selectedLibrary.id) }),
         });
 
-        const unlisten = window.chroma.on<number>("import-progress", payload => {
+        const unlisten = window.chroma.on("import-progress", payload => {
             progressNoti(importNoti, payload / items.length);
         });
 

@@ -1,4 +1,4 @@
-import type { AppError, Result } from "@project-chroma/utils";
+import type { AppError, ResultCore } from "@project-chroma/core";
 import type { ChromaConfig } from "./config.ts";
 import type { Album, AlbumComp, ImportCandidate, ImportItem, Item, ItemAlbumRef, Library, LibraryHealth, LibraryMetadataPath, Tag, TagItemRef } from "./gallery.ts";
 
@@ -28,78 +28,85 @@ export const ipc = {
     ALBUMS_CREATE: "chroma:albums:create",
     ALBUMS_GET_ITEMS: "chroma:albums:get-items",
     ALBUMS_ADD_ITEMS: "chroma:albums:add-items",
+    TAGS_GET: "chroma:tags:get",
+    TAGS_CREATE: "chroma:tags:create",
+    TAGS_UPDATE: "chroma:tags:update",
+    TAGS_DELETE: "chroma:tags:delete",
+    TAGS_GET_ITEM: "chroma:tags:get-item",
+    TAGS_ADD_TO_ITEMS: "chroma:tags:add-to-items",
+    TAGS_REMOVE_FROM_ITEMS: "chroma:tags:remove-from-items",
+    SEARCH_GET_STATUS: "chroma:search:get-status",
+    SEARCH_ENABLE: "chroma:search:enable",
+    SEARCH_ITEMS: "chroma:search:items",
     GEN_QUICK_THUMB: "chroma:gen-quick-thumb",
 } as const;
 
-export type ChromaIpcMap = {
-    [ipc.WINDOW_ACTION]: (action: WindowAction) => void;
-    [ipc.OPEN_DIALOG]: (options?: ChromaOpenDialogOptions) => string | string[] | null;
-    [ipc.SAVE_DIALOG]: (options?: ChromaSaveDialogOptions) => string | null;
-    [ipc.CONFIG_GET]:
-        | (() => ChromaConfig)
-        | {
-              [TKey in keyof ChromaConfig]: (key: TKey) => ChromaConfig[TKey];
-          }[keyof ChromaConfig];
-    [ipc.CONFIG_SET]: (partial: Partial<ChromaConfig>) => void;
-    [ipc.CONFIG_UPDATE]: (config: ChromaConfig) => void;
-    [ipc.LIBRARY_GET]: () => Library[];
-    [ipc.LIBRARY_CHECK_HEALTH]: (options: { libraryId: string }) => LibraryHealth;
-    [ipc.LIBRARY_GET_INFO_FROM_PATH]: (options: { path: string }) => LibraryMetadataPath;
-    [ipc.LIBRARY_CREATE]: (options: { name: string; icon: string; color: string; path: string }) => Library;
-    [ipc.LIBRARY_ADD]: (options: { path: string }) => Library;
-    [ipc.LIBRARY_UPDATE_PATH]: (options: { libraryId: string; newPath: string }) => void;
-    [ipc.LIBRARY_UPGRADE]: (options: { libraryId: string }) => true;
-    [ipc.LIBRARY_REMOVE]: (options: { libraryId: string }) => void;
-    [ipc.ITEMS_GET]: (options: { libraryId: string }) => Item[];
-    [ipc.ITEMS_VERIFY_CONFLICTS]: (options: { sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }) => ImportCandidate;
-    [ipc.ITEMS_ADD]: (options: { libraryId: string; items: ImportItem[]; deleteSource: boolean }) => { failures: AppError[] };
-    [ipc.ITEMS_SET_FAVORITE]: (options: { libraryId: string; itemIds: string[]; value: boolean }) => void;
-    [ipc.ITEMS_TRANSFER]: (options: { sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }) => void;
-    [ipc.ITEMS_EXPORT]: (options: { libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }) => void;
-    [ipc.ITEMS_DELETE]: (options: { libraryId: string; itemIds: string[] }) => void;
-    [ipc.ALBUMS_GET]: (options: { libraryId: string; parent?: string }) => AlbumComp[];
-    [ipc.ALBUMS_CREATE]: (options: { libraryId: string; album: Omit<Album, "id"> }) => void;
-    [ipc.ALBUMS_GET_ITEMS]: (options: { libraryId: string; albumId: string }) => ItemAlbumRef[];
-    [ipc.ALBUMS_ADD_ITEMS]: (options: { libraryId: string; albumId: string; itemIds: string[]; parent?: string }) => void;
-    [ipc.GEN_QUICK_THUMB]: (options: { path: string }) => Uint8Array | undefined;
+type IpcCall<TChannel extends string, TArgs extends unknown[], TResult> = {
+    readonly channel: TChannel;
+    readonly args?: TArgs;
+    readonly result?: TResult;
 };
 
-const bridgeSchema = {
-    windowAction: ipc.WINDOW_ACTION,
-    openDialog: ipc.OPEN_DIALOG,
-    saveDialog: ipc.SAVE_DIALOG,
+const defineCall =
+    <TArgs extends unknown[], TResult>() =>
+    <const TChannel extends string>(channel: TChannel): IpcCall<TChannel, TArgs, TResult> => ({ channel });
+
+export const ipcDefinition = {
+    windowAction: defineCall<[action: WindowAction], void>()(ipc.WINDOW_ACTION),
+    openDialog: defineCall<[options?: ChromaOpenDialogOptions], string | string[] | null>()(ipc.OPEN_DIALOG),
+    saveDialog: defineCall<[options?: ChromaSaveDialogOptions], string | null>()(ipc.SAVE_DIALOG),
     config: {
-        get: ipc.CONFIG_GET,
-        set: ipc.CONFIG_SET,
-        update: ipc.CONFIG_UPDATE,
+        get: defineCall<[] | [key: keyof ChromaConfig], ChromaConfig | ChromaConfig[keyof ChromaConfig]>()(ipc.CONFIG_GET),
+        set: defineCall<[partial: Partial<ChromaConfig>], void>()(ipc.CONFIG_SET),
+        update: defineCall<[config: ChromaConfig], void>()(ipc.CONFIG_UPDATE),
+    },
+    updates: {
+        getState: defineCall<[], UpdateState>()(ipc.UPDATE_GET_STATE),
+        check: defineCall<[], UpdateState>()(ipc.UPDATE_CHECK),
+        download: defineCall<[], UpdateState>()(ipc.UPDATE_DOWNLOAD),
+        install: defineCall<[], UpdateState>()(ipc.UPDATE_INSTALL),
     },
     library: {
-        get: ipc.LIBRARY_GET,
-        checkHealth: ipc.LIBRARY_CHECK_HEALTH,
-        getInfoFromPath: ipc.LIBRARY_GET_INFO_FROM_PATH,
-        create: ipc.LIBRARY_CREATE,
-        add: ipc.LIBRARY_ADD,
-        updatePath: ipc.LIBRARY_UPDATE_PATH,
-        upgrade: ipc.LIBRARY_UPGRADE,
-        remove: ipc.LIBRARY_REMOVE,
+        get: defineCall<[], Library[]>()(ipc.LIBRARY_GET),
+        checkHealth: defineCall<[{ libraryId: string }], LibraryHealth>()(ipc.LIBRARY_CHECK_HEALTH),
+        getInfoFromPath: defineCall<[{ path: string }], LibraryMetadataPath>()(ipc.LIBRARY_GET_INFO_FROM_PATH),
+        create: defineCall<[{ name: string; icon: string; color: string; path: string }], Library>()(ipc.LIBRARY_CREATE),
+        add: defineCall<[{ path: string }], Library>()(ipc.LIBRARY_ADD),
+        updatePath: defineCall<[{ libraryId: string; newPath: string }], void>()(ipc.LIBRARY_UPDATE_PATH),
+        upgrade: defineCall<[{ libraryId: string }], true>()(ipc.LIBRARY_UPGRADE),
+        remove: defineCall<[{ libraryId: string }], void>()(ipc.LIBRARY_REMOVE),
     },
     items: {
-        get: ipc.ITEMS_GET,
-        verifyConflicts: ipc.ITEMS_VERIFY_CONFLICTS,
-        addItems: ipc.ITEMS_ADD,
-        setItemsFavorite: ipc.ITEMS_SET_FAVORITE,
-        transferItems: ipc.ITEMS_TRANSFER,
-        exportItems: ipc.ITEMS_EXPORT,
-        deleteItems: ipc.ITEMS_DELETE,
+        get: defineCall<[{ libraryId: string }], Item[]>()(ipc.ITEMS_GET),
+        verifyConflicts: defineCall<[{ sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }], ImportCandidate>()(ipc.ITEMS_VERIFY_CONFLICTS),
+        addItems: defineCall<[{ libraryId: string; items: ImportItem[]; deleteSource: boolean }], { failures: AppError[] }>()(ipc.ITEMS_ADD),
+        setItemsFavorite: defineCall<[{ libraryId: string; itemIds: string[]; value: boolean }], void>()(ipc.ITEMS_SET_FAVORITE),
+        transferItems: defineCall<[{ sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }], void>()(ipc.ITEMS_TRANSFER),
+        exportItems: defineCall<[{ libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }], void>()(ipc.ITEMS_EXPORT),
+        deleteItems: defineCall<[{ libraryId: string; itemIds: string[] }], void>()(ipc.ITEMS_DELETE),
     },
     albums: {
-        get: ipc.ALBUMS_GET,
-        create: ipc.ALBUMS_CREATE,
-        getItems: ipc.ALBUMS_GET_ITEMS,
-        addItems: ipc.ALBUMS_ADD_ITEMS,
+        get: defineCall<[{ libraryId: string; parent?: string }], AlbumComp[]>()(ipc.ALBUMS_GET),
+        create: defineCall<[{ libraryId: string; album: Omit<Album, "id"> }], void>()(ipc.ALBUMS_CREATE),
+        getItems: defineCall<[{ libraryId: string; albumId: string }], ItemAlbumRef[]>()(ipc.ALBUMS_GET_ITEMS),
+        addItems: defineCall<[{ libraryId: string; albumId: string; itemIds: string[]; parent?: string }], void>()(ipc.ALBUMS_ADD_ITEMS),
+    },
+    tags: {
+        get: defineCall<[{ libraryId: string }], Tag[]>()(ipc.TAGS_GET),
+        create: defineCall<[{ libraryId: string; name: string; color: string }], Tag>()(ipc.TAGS_CREATE),
+        update: defineCall<[{ libraryId: string; tagId: string; name?: string; color?: string }], Tag | undefined>()(ipc.TAGS_UPDATE),
+        delete: defineCall<[{ libraryId: string; tagIds: string[] }], void>()(ipc.TAGS_DELETE),
+        getItem: defineCall<[{ libraryId: string; itemId: string }], TagItemRef[]>()(ipc.TAGS_GET_ITEM),
+        addToItems: defineCall<[{ libraryId: string; itemIds: string[]; tagIds: string[] }], void>()(ipc.TAGS_ADD_TO_ITEMS),
+        removeFromItems: defineCall<[{ libraryId: string; itemIds: string[]; tagIds: string[] }], void>()(ipc.TAGS_REMOVE_FROM_ITEMS),
+    },
+    search: {
+        getStatus: defineCall<[{ libraryId: string }], ItemSearchStatus>()(ipc.SEARCH_GET_STATUS),
+        enable: defineCall<[{ libraryId: string }], ItemSearchStatus>()(ipc.SEARCH_ENABLE),
+        items: defineCall<[{ libraryId: string; query: string; limit: number; minScore?: number }], ItemSearchMatch[]>()(ipc.SEARCH_ITEMS),
     },
     other: {
-        genQuickThumb: ipc.GEN_QUICK_THUMB,
+        genQuickThumb: defineCall<[{ path: string }], Uint8Array | undefined>()(ipc.GEN_QUICK_THUMB),
     },
 } as const;
 
@@ -120,23 +127,36 @@ export type ChromaSaveDialogOptions = {
     defaultPath?: string;
     canCreateDirectories?: boolean;
 };
-export type ChromaIpcChannel = keyof ChromaIpcMap;
 
-type IpcFunction = (...args: never[]) => unknown;
 type MaybePromise<T> = Promise<T> | T;
-type MaybeResult<T> = Result<T> | T;
+type MaybeResult<T> = ResultCore<T> | T;
+type UnionToIntersection<T> = (T extends unknown ? (value: T) => void : never) extends (value: infer I) => void ? I : never;
+type IpcMapFromDefinition<T> =
+    T extends IpcCall<infer TChannel, infer TArgs, infer TResult>
+        ? { [K in TChannel]: (...args: TArgs) => TResult }
+        : T extends object
+          ? UnionToIntersection<{ [K in keyof T]: IpcMapFromDefinition<T[K]> }[keyof T]>
+          : never;
+
+export type ChromaIpcMap = IpcMapFromDefinition<typeof ipcDefinition>;
+export type ChromaIpcChannel = keyof ChromaIpcMap;
 
 export type ChromaIpcArgs<TChannel extends ChromaIpcChannel> = Parameters<ChromaIpcMap[TChannel]>;
 
-type MatchingIpcFunction<TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel>> = ChromaIpcMap[TChannel] extends infer TFunction extends IpcFunction
-    ? TFunction extends unknown
-        ? TArgs extends Parameters<TFunction>
-            ? TFunction
-            : never
-        : never
-    : never;
+type ChromaIpcResult<TChannel extends ChromaIpcChannel> = ReturnType<ChromaIpcMap[TChannel]>;
 
-export type ChromaIpcResult<TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel>> = ReturnType<MatchingIpcFunction<TChannel, TArgs>>;
+export type ChromaIpcHandler<TEvent, TChannel extends ChromaIpcChannel> = (event: TEvent, ...args: ChromaIpcArgs<TChannel>) => MaybePromise<MaybeResult<ChromaIpcResult<TChannel>>>;
+
+export type ChromaIpcRegister<TEvent> = <TChannel extends ChromaIpcChannel>(channel: TChannel, listener: ChromaIpcHandler<TEvent, TChannel>) => void;
+
+type BridgeFromSchema<Schema> =
+    Schema extends IpcCall<string, infer TArgs, infer TResult>
+        ? (...args: TArgs) => Promise<ResultCore<TResult>>
+        : {
+              [K in keyof Schema]: BridgeFromSchema<Schema[K]>;
+          };
+
+type DerivedChromaBridge = BridgeFromSchema<typeof ipcDefinition>;
 
 export type ChromaIpcInvoke = <TChannel extends ChromaIpcChannel, const TArgs extends ChromaIpcArgs<TChannel>>(channel: TChannel, ...args: TArgs) => Promise<Result<ChromaIpcResult<TChannel, TArgs>>>;
 
@@ -145,7 +165,5 @@ export type ChromaIpcHandler<TEvent, TChannel extends ChromaIpcChannel, TArgs ex
     ...args: TArgs
 ) => MaybePromise<MaybeResult<ChromaIpcResult<TChannel, TArgs>>>;
 
-export type ChromaIpcRegister<TEvent> = <TChannel extends ChromaIpcChannel, const TArgs extends ChromaIpcArgs<TChannel>>(
-    channel: TChannel,
-    listener: ChromaIpcHandler<TEvent, TChannel, TArgs>,
-) => void;
+export type ChromaEventChannel = keyof ChromaEventMap;
+export type ChromaEventListener<TChannel extends ChromaEventChannel> = (payload: ChromaEventMap[TChannel]) => void;

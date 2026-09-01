@@ -1,3 +1,4 @@
+import { ensureItemProps } from "@project-chroma/utils";
 import { optional, sqlify } from "../schema.ts";
 import { boolToInt, type DbRow } from "../types.ts";
 import type { Item, ItemSearchMatch, Tag, TagItemRef } from "@project-chroma/contracts/gallery";
@@ -53,12 +54,13 @@ export function add(db: ChromaDB, items: Item[]) {
                 @rawLiveVideo,
                 @hasAdjustments,
                 @createdAt
-            )`).run(sqlify(item));
+            )`).run(sqlify(ensureItemProps(item)));
         }
     })(items);
 }
 
 export function setFavoriteState(db: ChromaDB, itemIds: readonly string[], value: boolean): void {
+    if (itemIds.length === 0) return;
     const placeholders = itemIds.map(() => "?").join(",");
     db.prepare(`UPDATE item SET isFavorite = ? WHERE id IN (${placeholders})`).run(boolToInt(value), ...itemIds);
 }

@@ -5,20 +5,23 @@
     "type": "module",
     "main": "dist-electron/main.cjs",
     "scripts": {
+        "dev": "bun run bundle:binaries && bun run build && cross-env ELECTRON_START_URL=http://localhost:5173 electron .",
+        "start": "bun run bundle:binaries && electron .",
         "build": "tsdown",
-        "rebuild": "electron-rebuild -f -w better-sqlite3",
-        "start": "electron .",
-        "build": "tsdown",
+        "bundle:binaries": "bun scripts/bundleBinaries.ts",
+        "package": "bun run build && bun run bundle:binaries && electron-builder",
         "rebuild": "bun run rebuild:electron && bun run rebuild:sharp",
         "rebuild:electron": "electron-rebuild -f -w better-sqlite3",
         "rebuild:sharp": "cd ./node_modules/sharp && bun run build",
         "typecheck": "tsc -p tsconfig.json --noEmit"
     },
     "dependencies": {
+        "@ffmpeg-installer/ffmpeg": "^1.1.0",
+        "@ffprobe-installer/ffprobe": "^2.1.2",
         "@project-chroma/contracts": "workspace:*",
         "@project-chroma/utils": "workspace:*",
         "better-sqlite3": "^12.5.0",
-        "electron": "^39.2.7",
+        "electron-updater": "^6.6.2",
         "piscina": "^5.2.0",
         "sharp": "^0.35.3",
         "uuid": "^13.0.0"
@@ -27,7 +30,22 @@
         "@electron/rebuild": "^4.0.1",
         "@types/better-sqlite3": "^7.6.13",
         "@types/node": "catalog:",
+        "cross-env": "^10.1.0",
+        "electron": "^39.2.7",
+        "electron-builder": "^26.15.3",
         "tsdown": "^0.22.0"
+    },
+    "build": {
+        "asar": true,
+        "extraResources": [
+            {
+                "from": "resources/bin",
+                "to": "bin",
+                "filter": [
+                    "**/*"
+                ]
+            }
+        ]
     },
     "productName": "Project Chroma"
 }

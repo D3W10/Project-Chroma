@@ -1,8 +1,7 @@
-import { isAppError, toAppError, type AppError } from "./errors.ts";
+import { isAppError, toAppError } from "./errors.ts";
+import type { AppError, ResultCore } from "@project-chroma/core";
 
-export type Result<T, E = AppError> = ResultAccepted<T> | ResultRejected<E>;
-export type ResultAccepted<T> = { success: true; data: T; error: null };
-export type ResultRejected<E = AppError> = { success: false; data: null; error: E };
+export type Result<T, E = AppError> = ResultCore<T, E>;
 
 function rejectResult<E = AppError>(error: E): Result<never, E> {
     console.log("[ERRO]", error);

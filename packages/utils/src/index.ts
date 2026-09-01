@@ -1,8 +1,10 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export * from "@project-chroma/core";
 export * from "./result.ts";
 export * from "./errors.ts";
+export * from "./objects.ts";
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));

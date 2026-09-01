@@ -38,3 +38,16 @@ export function withDatabase<TResult>(root: string, callback: (db: ChromaDB) => 
         }
     } else return db as WithDatabaseResult<TResult>;
 }
+
+export async function withDatabaseAsync<TResult>(root: string, callback: (db: ChromaDB) => Promise<TResult>): Promise<WithDatabaseResult<TResult>> {
+    const db = openConnection(root);
+
+    if (!db.success) return db as WithDatabaseResult<TResult>;
+
+    try {
+        const call = await callback(db.data);
+        return isResult(call) ? (call as WithDatabaseResult<TResult>) : (Result.accept(call) as WithDatabaseResult<TResult>);
+    } finally {
+        db.data.close();
+    }
+}

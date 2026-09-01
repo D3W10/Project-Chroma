@@ -56,8 +56,6 @@ function CreateAlbumDialogBody({ currentAlbum, onOpenChange, onSuccess }: Omit<C
                 selectedBanner: 0,
                 icon: albumEmoji,
                 color: albumColor,
-                coverPhoto: undefined,
-                bannerPhoto: undefined,
                 createdAt: new Date().toISOString(),
             });
             if (data) onSuccess?.(data);
