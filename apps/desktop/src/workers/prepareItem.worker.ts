@@ -58,22 +58,36 @@ export default async function prepareItem({ importItem, originalsDir, thumbsDir,
         takenDate = stats.birthtime || stats.mtime || takenDate;
     } catch {}
 
-    if (!fileType.startsWith("video/")) {
-        const image = sharp(fileData);
-        const { width: w, height: h } = await image.metadata();
+    try {
+        if (!fileType.startsWith("video/")) {
+            const image = sharp(fileData);
+            const { width: w, height: h } = await image.metadata();
 
-        width = w;
-        height = h;
+            width = w;
+            height = h;
 
-        await generateImageThumbnail(image, { destination: thumbPath });
-    } else {
-        const { width: w, height: h, duration: d } = await getVideoMetadata(importItem.sourcePath);
+            await generateImageThumbnail(image, { destination: thumbPath });
+        } else {
+            const metadata = await getVideoMetadata(importItem.sourcePath);
+            if (!metadata.success) {
+                await rollback.revert();
+                return Result.reject(metadata.error);
+            }
 
-        width = w;
-        height = h;
-        duration = d;
+            width = metadata.data.width;
+            height = metadata.data.height;
+            duration = metadata.data.duration;
 
-        await generateVideoThumbnail(importItem.sourcePath, { destination: thumbPath });
+            const thumbnail = await generateVideoThumbnail(importItem.sourcePath, { destination: thumbPath });
+            if (!thumbnail.success) {
+                await rollback.revert();
+                return Result.reject(thumbnail.error);
+            }
+        }
+    } catch (error) {
+        await rollback.revert();
+        return Result.reject(Errors.itemReadFail({ message: "Unable to prepare item metadata or thumbnail", error, details: { sourcePath: importItem.sourcePath } }));
+    }
     }
 
     if (deleteSource) fs.unlink(importItem.sourcePath);

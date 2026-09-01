@@ -7,6 +7,7 @@ import { AlbumCover } from "@/components/AlbumCover";
 import { useLibrary } from "@/lib/useLibrary";
 import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useStack } from "@/lib/useStack";
+import { queryKeys } from "@/lib/utils";
 import type { Album } from "@project-chroma/contracts/gallery";
 
 interface SelectAlbumDialogProps {
@@ -38,7 +39,7 @@ function SelectAlbumDialogBody({ onOpenChange, onSuccess }: Omit<SelectAlbumDial
     const { selectedLibrary } = useLibrary();
 
     const { isFetching, data: albums } = useQuerySafe({
-        queryKey: [selectedLibrary?.id, "albums", currentAlbum],
+        queryKey: queryKeys.albums(selectedLibrary?.id ?? "", currentAlbum?.id),
         queryFn: () => window.chroma!.albums.get({ libraryId: selectedLibrary?.id ?? "", parent: currentAlbum?.id }),
         placeholderData: [],
     });
@@ -85,7 +86,7 @@ function SelectAlbumDialogBody({ onOpenChange, onSuccess }: Omit<SelectAlbumDial
                             key={p.id}
                             variant="ghost"
                             className={cn(
-                                "w-full h-fit p-3 flex justify-between items-center border-0 border-b border-input/30 rounded-none first:rounded-t-xl transition-shadow",
+                                "w-full h-fit p-3 flex justify-between items-center hover:bg-secondary-foreground/5 border-0 border-b border-input/30 rounded-none first:rounded-t-xl transition",
                                 ((!currentAlbum && albums.length > 4) || (currentAlbum && albums.length > 3)) && "last:rounded-b-xl",
                                 selected && p.id === selected.id && "inset-ring-2 inset-ring-primary",
                             )}

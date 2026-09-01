@@ -233,13 +233,10 @@ function ItemPreview({ path }: { path: string }) {
         queryKey: ["quick-thumb", path],
         queryFn: () => window.chroma!.other.genQuickThumb({ path }),
     });
-    const ext = /\w+$/.exec(path);
-    const isError = !ext || ext.length === 0;
-
     if (isPending) return <Spinner className="size-6 text-muted-foreground" />;
-    if (!thumb || error || isError) return <IconPhotoVideo className="size-6 text-muted-foreground" />;
+    if (!thumb || error) return <IconPhotoVideo className="size-6 text-muted-foreground" />;
 
-    return <img src={"data:" + extToMime(ext[0]) + ";base64," + uint8ToBase64(thumb)} className="size-full object-cover" alt="Preview" />;
+    return <img src={"data:image/webp;base64," + uint8ToBase64(thumb)} className="size-full object-cover" alt="Preview" />;
 }
 
 interface ReviewPageProps {

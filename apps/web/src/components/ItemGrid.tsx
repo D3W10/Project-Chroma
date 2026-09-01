@@ -164,7 +164,7 @@ function GridItem({ item, selected, expanded, viewingItem, lastViewingItem, onCl
                             !isViewing ? "delay-500" : "opacity-0",
                         )}
                     >
-                        {Math.floor(item.duration / 60)}:{String(item.duration % 60).padStart(2, "0")}
+                        {formatDuration(item.duration)}
                     </div>
                 )}
             </motion.div>

@@ -87,14 +87,13 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
     registerHandle(ipc.ITEMS_GET, async (_, { libraryId }) => withLibrary(libraryId, lib => DB.withDatabase(lib.path, db => DB.items.getAll(db))));
     registerHandle(ipc.ITEMS_VERIFY_CONFLICTS, async (_, { sourcePaths, checkLivePhotos, parseEdits }) => {
         const groups = new Map<string, ConflictGroup>();
-
-        const emptyGroup = (): ConflictGroup => ({
-            originalItems: [],
-            editedItems: [],
-            originalVideos: [],
-            editedVideos: [],
-        });
-
+        const getGroup = (key: string) => {
+            const group = groups.get(key);
+            if (group) return group;
+            const next: ConflictGroup = { originalItems: [], editedItems: [], originalVideos: [], editedVideos: [] };
+            groups.set(key, next);
+            return next;
+        };
         const uneditedName = (name: string) => `IMG_${name.slice(5)}`;
 
         for (const pathStr of sourcePaths) {
@@ -107,51 +106,27 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
             const mime = extToMime(ext);
 
             if (ext === "aae") {
-                const group = groups.get(stem) ?? emptyGroup();
-                group.adjustments = pathStr;
-                groups.set(stem, group);
+                getGroup(stem).adjustments = pathStr;
                 continue;
             }
 
             if (mime.startsWith("image/")) {
                 if (parseEdits && stem.startsWith("IMG_E")) {
-                    const key = uneditedName(stem);
-                    const group = groups.get(key) ?? emptyGroup();
-                    group.editedItems.push(pathStr);
-                    groups.set(key, group);
+                    getGroup(uneditedName(stem)).editedItems.push(pathStr);
                 } else {
-                    const group = groups.get(stem) ?? emptyGroup();
-                    group.originalItems.push(pathStr);
-                    groups.set(stem, group);
+                    getGroup(stem).originalItems.push(pathStr);
                 }
             } else if (mime.startsWith("video/")) {
                 if (parseEdits && stem.startsWith("IMG_E")) {
-                    const key = uneditedName(stem);
-                    const group = groups.get(key) ?? emptyGroup();
-
-                    if (checkLivePhotos) {
-                        group.editedVideos.push(pathStr);
-                    } else {
-                        group.editedItems.push(pathStr);
-                    }
-
-                    groups.set(key, group);
+                    const group = getGroup(uneditedName(stem));
+                    (checkLivePhotos ? group.editedVideos : group.editedItems).push(pathStr);
                 } else {
                     let key = stem;
-
                     if (!checkLivePhotos && !parseEdits) {
                         key += "_V";
                     }
-
-                    const group = groups.get(key) ?? emptyGroup();
-
-                    if (checkLivePhotos) {
-                        group.originalVideos.push(pathStr);
-                    } else {
-                        group.originalItems.push(pathStr);
-                    }
-
-                    groups.set(key, group);
+                    const group = getGroup(key);
+                    (checkLivePhotos ? group.originalVideos : group.originalItems).push(pathStr);
                 }
             }
         }
@@ -210,6 +185,23 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
             conflicts,
         };
     });
+    registerHandle(ipc.ITEMS_ADD, async (_, { libraryId, items, deleteSource }) => {
+        const lib = await getLib(libraryId);
+        if (!lib) return Result.reject(Errors.libraryNotFound());
+
+        await createDirectories(lib.path);
+
+        const piscina = new Piscina<PrepareItemProps, Result<Item, AppError>>({
+            filename: new URL("../dist-electron/workers/prepareItem.worker.cjs", import.meta.url).href,
+            maxThreads: cpus().length,
+        DB.withDatabase(lib.path, db =>
+            DB.items.add(
+                db,
+                processingPool.filter(p => p.success).map(p => p.data),
+            ),
+        );
+        return { failures: processingPool.filter(p => !p.success).map(p => p.error) };
+    });
     registerHandle(ipc.ITEMS_SET_FAVORITE, async (_, { libraryId, itemIds, value }) => {
         const lib = await getLib(libraryId);
         if (!lib) return Result.reject(Errors.libraryNotFound());
@@ -238,8 +230,13 @@ export function registerLibraryCommands(app: Electron.App, config: ConfigStore) 
     // Other
 
     registerHandle(ipc.GEN_QUICK_THUMB, async (_, { path }) => {
+        const mime = extToMime(fileExtension(path));
+        if (mime.startsWith("video/")) {
+            return utils.generateVideoThumbnail(path, { size: 96 });
+        }
+
         const image = sharp(await fs.readFile(path));
-        const thumb = await utils.generateImageThumbnail(image, { size: 48 });
+        const thumb = await utils.generateImageThumbnail(image, { size: 96 });
 
         if (!thumb) return Result.reject(Errors.missingSource());
         return thumb;
