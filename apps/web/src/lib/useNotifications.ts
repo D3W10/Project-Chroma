@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { toast } from "@project-chroma/ui/sonner";
+import { isResult, Result } from "@project-chroma/utils";
 import type { Notification, NotificationType } from "@project-chroma/contracts/gallery";
-import type { Result } from "@project-chroma/utils";
 
 interface NotificationStore {
     notifications: Notification[];
@@ -23,7 +23,7 @@ type NotificationBaseOptions = {
 };
 
 type PromiseNotificationFields<T, E = string> = {
-    promise?: Promise<Result<T, E>>;
+    promise?: Promise<T> | Promise<Result<T, E>>;
     hasProgress?: boolean;
     peek?: string;
     success?: (data: T) => {
@@ -123,10 +123,11 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                 };
 
                 promise
-                    .then(e => {
-                        if (!e.success) return promiseFail(e.error);
+                    .then(value => {
+                        const result = isResult(value) ? value : Result.accept(value);
+                        if (!result.success) return promiseFail(result.error);
                         else {
-                            const override = success?.(e.data);
+                            const override = success?.(result.data as T);
                             data = { ...data, ...override };
                             get().updateNoti(id, { type: "success", ...override });
 
@@ -134,7 +135,7 @@ export const useNotifications = create<NotificationStore>((set, get) => ({
                             if (!currentIsOpen) toast.success({ title: data.title, description: data.description });
                             console.log("[SUCC] " + data.title + " - " + data.description);
 
-                            onSuccess?.(e.data);
+                            onSuccess?.(result.data as T);
                         }
                     })
                     .catch(promiseFail);

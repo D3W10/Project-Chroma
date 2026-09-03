@@ -18,7 +18,7 @@ export const ipc = {
     LIBRARY_UPGRADE: "chroma:library:upgrade",
     LIBRARY_REMOVE: "chroma:library:remove",
     ITEMS_GET: "chroma:items:get",
-    ITEMS_VERIFY_CONFLICTS: "chroma:items:verify-conflicts",
+    ITEMS_GROUP: "chroma:items:group",
     ITEMS_ADD: "chroma:items:add",
     ITEMS_SET_FAVORITE: "chroma:items:set-favorite",
     ITEMS_TRANSFER: "chroma:items:transfer",
@@ -78,7 +78,7 @@ export const ipcDefinition = {
     },
     items: {
         get: defineCall<[{ libraryId: string }], Item[]>()(ipc.ITEMS_GET),
-        verifyConflicts: defineCall<[{ sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }], ImportCandidate>()(ipc.ITEMS_VERIFY_CONFLICTS),
+        groupItems: defineCall<[{ sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }], ImportGroupingResult>()(ipc.ITEMS_GROUP),
         addItems: defineCall<[{ libraryId: string; items: ImportItem[]; deleteSource: boolean }], { failures: AppError[] }>()(ipc.ITEMS_ADD),
         setItemsFavorite: defineCall<[{ libraryId: string; itemIds: string[]; value: boolean }], void>()(ipc.ITEMS_SET_FAVORITE),
         transferItems: defineCall<[{ sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }], void>()(ipc.ITEMS_TRANSFER),

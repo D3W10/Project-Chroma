@@ -10,4 +10,9 @@ function RouteComponent() {
         placeholderData: [],
     });
     const { selected, setSelected, handleSelect, handleRightClick, unselectAll } = useSelection({ items: filteredItems });
+                    <ButtonGroup>
+                        <Button variant="outline" size="icon" disabled={filteredItems.length === 0} onClick={() => updateSettings({ libraryExpanded: !settings.libraryExpanded })}>
+                            <IconArrowAutofitHeight className="size-5" />
+                        </Button>
+                    </ButtonGroup>
 }

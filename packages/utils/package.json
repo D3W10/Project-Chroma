@@ -10,8 +10,7 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "clsx": "^2.1.1",
-        "tailwind-merge": "^3.6.0"
+        "cn": "^0.2.4"
     },
     "devDependencies": {
         "@project-chroma/contracts": "workspace:*",

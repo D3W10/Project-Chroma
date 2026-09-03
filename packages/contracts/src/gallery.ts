@@ -71,17 +71,21 @@ export interface ImportItem {
     adjustmentsPath?: string | undefined;
 }
 
-export interface ImportCandidate {
-    itemsToImport: ImportItem[];
-    conflicts: ConflictGroup[];
+export interface ImportGroupingResult {
+    items: ImportItem[];
+    livePhotoConflicts: ImportLivePhotoConflict[];
+    adjustmentConflicts: ImportAdjustmentConflict[];
 }
 
-export interface ConflictGroup {
-    originalItems: string[];
-    editedItems: string[];
-    originalVideos: string[];
-    editedVideos: string[];
-    adjustments?: string;
+export interface ImportLivePhotoConflict {
+    itemIndex: number;
+    field: "livePath" | "originalLivePath";
+    candidatePaths: string[];
+}
+
+export interface ImportAdjustmentConflict {
+    adjustmentPath: string;
+    candidateItemIndexes: number[];
 }
 
 export interface Notification {

@@ -1,14 +1,8 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
+export { cn } from "cn";
 export * from "@project-chroma/core";
 export * from "./result.ts";
 export * from "./errors.ts";
 export * from "./objects.ts";
-
-export function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
 
 export function rollbackStack() {
     const stack: (() => Promise<void>)[] = [];
@@ -16,7 +10,7 @@ export function rollbackStack() {
     return {
         push: (roll: () => Promise<void>) => stack.push(roll),
         async revert() {
-            for (const roll of stack.reverse()) await roll();
+            for (const roll of stack.reverse()) await roll().catch(() => undefined);
         },
     };
 }
