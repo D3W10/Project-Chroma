@@ -72,11 +72,9 @@ export function ImportItemsDialog({ open, onOpenChange }: ImportItemsDialogProps
         <DialogPaged
             pages={{
                 source: {
-                    height: 319,
                     node: <SourcePage onItemsSelected={setSelectedItems} setIsSelecting={setIsSelecting} />,
                 },
                 review: {
-                    height: 442,
                     node: (
                         <ReviewPage
                             selectedItems={selectedItems}
@@ -93,7 +91,6 @@ export function ImportItemsDialog({ open, onOpenChange }: ImportItemsDialogProps
                     ),
                 },
                 conflicts: {
-                    height: 489,
                     node: <ConflictsPage grouping={groupingToResolve} onStartImport={importItems} />,
                 },
             }}
