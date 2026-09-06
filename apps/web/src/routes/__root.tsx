@@ -6,6 +6,7 @@ import { Framebar } from "@/components/layout/framebar";
 import { useLibrary } from "@/lib/useLibrary";
 import { useQuerySafe } from "@/lib/useQuerySafe";
 import { useSettings } from "@/lib/useSettings";
+import { useUpdates } from "@/lib/useUpdates";
 
 export const Route = createRootRoute({
     component: RootComponent,
@@ -27,6 +28,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+    useUpdates();
     const { libraries, setLibraries, selectedLibrary, selectLibraryById } = useLibrary();
     const location = useLocation();
     const navigate = useNavigate();

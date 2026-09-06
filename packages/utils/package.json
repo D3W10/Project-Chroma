@@ -10,7 +10,8 @@
         "typecheck": "tsc --noEmit"
     },
     "dependencies": {
-        "cn": "^0.2.4"
+        "cn": "^0.2.4",
+        "date-fns": "^4.4.0"
     },
     "devDependencies": {
         "@project-chroma/contracts": "workspace:*",

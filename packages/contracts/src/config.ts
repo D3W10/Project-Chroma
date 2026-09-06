@@ -1,5 +1,7 @@
 import type { Library } from "./gallery.ts";
 
+export const DEFAULT_EXPORT_DATE_FORMAT = "yyyy-MM-dd HH.mm.ss";
+
 export interface ChromaConfig {
     libraries: Library[];
     selected_library: string | null;
@@ -21,6 +23,8 @@ export interface ChromaSettings {
         livePhotos: boolean;
         edits: boolean;
         adjustments: boolean;
+        nameByTakenDate: boolean;
+        dateFormat: string;
     };
 }
 
@@ -42,6 +46,8 @@ export const defaultChromaConfig = {
             livePhotos: false,
             edits: false,
             adjustments: false,
+            nameByTakenDate: false,
+            dateFormat: DEFAULT_EXPORT_DATE_FORMAT,
         },
     },
 } satisfies ChromaConfig;

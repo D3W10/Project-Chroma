@@ -1,6 +1,6 @@
 import type { AppError, ResultCore } from "@project-chroma/core";
 import type { ChromaConfig } from "./config.ts";
-import type { Album, AlbumComp, ImportCandidate, ImportItem, Item, ItemAlbumRef, Library, LibraryHealth, LibraryMetadataPath, Tag, TagItemRef } from "./gallery.ts";
+import type { Album, AlbumComp, ImportGroupingResult, ImportItem, Item, ItemAlbumRef, ItemFileOperationSummary, ItemSearchMatch, ItemSearchStatus, Library, LibraryHealth, LibraryMetadataPath, Tag, TagItemsRef } from "./gallery.ts";
 
 export const ipc = {
     WINDOW_ACTION: "chroma:window-action",
@@ -9,6 +9,12 @@ export const ipc = {
     CONFIG_GET: "chroma:config:get",
     CONFIG_SET: "chroma:config:set",
     CONFIG_UPDATE: "chroma:config:update",
+    UPDATE_GET_STATE: "chroma:update:get-state",
+    UPDATE_CHECK: "chroma:update:check",
+    UPDATE_DOWNLOAD: "chroma:update:download",
+    UPDATE_INSTALL: "chroma:update:install",
+    UPDATE_STATE: "chroma:update:state",
+    MENU_ACTION: "chroma:menu-action",
     LIBRARY_GET: "chroma:library:get",
     LIBRARY_CHECK_HEALTH: "chroma:library:check-health",
     LIBRARY_GET_INFO_FROM_PATH: "chroma:library:get-info-from-path",
@@ -32,9 +38,8 @@ export const ipc = {
     TAGS_CREATE: "chroma:tags:create",
     TAGS_UPDATE: "chroma:tags:update",
     TAGS_DELETE: "chroma:tags:delete",
-    TAGS_GET_ITEM: "chroma:tags:get-item",
-    TAGS_ADD_TO_ITEMS: "chroma:tags:add-to-items",
-    TAGS_REMOVE_FROM_ITEMS: "chroma:tags:remove-from-items",
+    TAGS_GET_ITEMS: "chroma:tags:get-items",
+    TAGS_SET_ON_ITEMS: "chroma:tags:set-on-items",
     SEARCH_GET_STATUS: "chroma:search:get-status",
     SEARCH_ENABLE: "chroma:search:enable",
     SEARCH_ITEMS: "chroma:search:items",
@@ -53,7 +58,7 @@ const defineCall =
 
 export const ipcDefinition = {
     windowAction: defineCall<[action: WindowAction], void>()(ipc.WINDOW_ACTION),
-    openDialog: defineCall<[options?: ChromaOpenDialogOptions], string | string[] | null>()(ipc.OPEN_DIALOG),
+    openDialog: defineCall<[options?: ChromaOpenDialogOptions], string[] | null>()(ipc.OPEN_DIALOG),
     saveDialog: defineCall<[options?: ChromaSaveDialogOptions], string | null>()(ipc.SAVE_DIALOG),
     config: {
         get: defineCall<[] | [key: keyof ChromaConfig], ChromaConfig | ChromaConfig[keyof ChromaConfig]>()(ipc.CONFIG_GET),
@@ -81,8 +86,8 @@ export const ipcDefinition = {
         groupItems: defineCall<[{ sourcePaths: string[]; checkLivePhotos: boolean; parseEdits: boolean }], ImportGroupingResult>()(ipc.ITEMS_GROUP),
         addItems: defineCall<[{ libraryId: string; items: ImportItem[]; deleteSource: boolean }], { failures: AppError[] }>()(ipc.ITEMS_ADD),
         setItemsFavorite: defineCall<[{ libraryId: string; itemIds: string[]; value: boolean }], void>()(ipc.ITEMS_SET_FAVORITE),
-        transferItems: defineCall<[{ sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }], void>()(ipc.ITEMS_TRANSFER),
-        exportItems: defineCall<[{ libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean }], void>()(ipc.ITEMS_EXPORT),
+        transferItems: defineCall<[{ sourceId: string; targetId: string; itemIds: string[]; doMove: boolean }], ItemFileOperationSummary>()(ipc.ITEMS_TRANSFER),
+        exportItems: defineCall<[{ libraryId: string; destination: string; itemIds: string[]; live: boolean; edits: boolean; adjustments: boolean; nameByTakenDate?: boolean; dateFormat?: string }], ItemFileOperationSummary>()(ipc.ITEMS_EXPORT),
         deleteItems: defineCall<[{ libraryId: string; itemIds: string[] }], void>()(ipc.ITEMS_DELETE),
     },
     albums: {
@@ -94,11 +99,10 @@ export const ipcDefinition = {
     tags: {
         get: defineCall<[{ libraryId: string }], Tag[]>()(ipc.TAGS_GET),
         create: defineCall<[{ libraryId: string; name: string; color: string }], Tag>()(ipc.TAGS_CREATE),
-        update: defineCall<[{ libraryId: string; tagId: string; name?: string; color?: string }], Tag | undefined>()(ipc.TAGS_UPDATE),
+        update: defineCall<[{ libraryId: string; tagId: string; name?: string; color?: string }], Tag>()(ipc.TAGS_UPDATE),
         delete: defineCall<[{ libraryId: string; tagIds: string[] }], void>()(ipc.TAGS_DELETE),
-        getItem: defineCall<[{ libraryId: string; itemId: string }], TagItemRef[]>()(ipc.TAGS_GET_ITEM),
-        addToItems: defineCall<[{ libraryId: string; itemIds: string[]; tagIds: string[] }], void>()(ipc.TAGS_ADD_TO_ITEMS),
-        removeFromItems: defineCall<[{ libraryId: string; itemIds: string[]; tagIds: string[] }], void>()(ipc.TAGS_REMOVE_FROM_ITEMS),
+        getItems: defineCall<[{ libraryId: string; itemIds: string[] }], TagItemsRef[]>()(ipc.TAGS_GET_ITEMS),
+        setOnItems: defineCall<[{ libraryId: string; itemIds: string[]; tagIds: string[]; assigned: boolean }], void>()(ipc.TAGS_SET_ON_ITEMS),
     },
     search: {
         getStatus: defineCall<[{ libraryId: string }], ItemSearchStatus>()(ipc.SEARCH_GET_STATUS),
@@ -127,6 +131,19 @@ export type ChromaSaveDialogOptions = {
     defaultPath?: string;
     canCreateDirectories?: boolean;
 };
+
+export type UpdateState =
+    | { status: "disabled"; message: string | null; version: string }
+    | { status: "idle"; message: string | null; version: string }
+    | { status: "checking"; message: string | null; version: string }
+    | { status: "available"; message: string | null; version: string; availableVersion: string }
+    | { status: "up-to-date"; message: string | null; version: string; checkedAt: string }
+    | { status: "downloading"; message: string | null; version: string; percent: number }
+    | { status: "downloaded"; message: string | null; version: string; downloadedVersion: string }
+    | { status: "error"; message: string; version: string };
+
+export type MenuAction = "open-settings" | "check-for-updates" | "show-about";
+export type ChromaPlatform = "aix" | "android" | "darwin" | "freebsd" | "haiku" | "linux" | "openbsd" | "sunos" | "win32" | "cygwin" | "netbsd";
 
 type MaybePromise<T> = Promise<T> | T;
 type MaybeResult<T> = ResultCore<T> | T;
@@ -158,12 +175,25 @@ type BridgeFromSchema<Schema> =
 
 type DerivedChromaBridge = BridgeFromSchema<typeof ipcDefinition>;
 
-export type ChromaIpcInvoke = <TChannel extends ChromaIpcChannel, const TArgs extends ChromaIpcArgs<TChannel>>(channel: TChannel, ...args: TArgs) => Promise<Result<ChromaIpcResult<TChannel, TArgs>>>;
+export type ChromaBridge = Omit<DerivedChromaBridge, "config" | "updates"> & {
+    config: Omit<DerivedChromaBridge["config"], "get"> & {
+        get(): Promise<ResultCore<ChromaConfig>>;
+        get<TKey extends keyof ChromaConfig>(key: TKey): Promise<ResultCore<ChromaConfig[TKey]>>;
+    };
+    platform(): ChromaPlatform;
+    fileUrl(filePath: string): string;
+    updates: DerivedChromaBridge["updates"] & {
+        onState(listener: (state: UpdateState) => void): () => void;
+    };
+    on<TChannel extends ChromaEventChannel>(channel: TChannel, callback: (payload: ChromaEventMap[TChannel]) => void): () => void;
+    onMenuAction(listener: (action: MenuAction) => void): () => void;
+};
 
-export type ChromaIpcHandler<TEvent, TChannel extends ChromaIpcChannel, TArgs extends ChromaIpcArgs<TChannel> = ChromaIpcArgs<TChannel>> = (
-    event: TEvent,
-    ...args: TArgs
-) => MaybePromise<MaybeResult<ChromaIpcResult<TChannel, TArgs>>>;
+export type ChromaEventMap = {
+    "import-progress": number;
+    [ipc.UPDATE_STATE]: UpdateState;
+    [ipc.MENU_ACTION]: MenuAction;
+};
 
 export type ChromaEventChannel = keyof ChromaEventMap;
 export type ChromaEventListener<TChannel extends ChromaEventChannel> = (payload: ChromaEventMap[TChannel]) => void;

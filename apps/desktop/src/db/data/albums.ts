@@ -73,6 +73,25 @@ export function getItems(db: ChromaDB, albumId: string): ItemAlbumRef[] {
     return rows.map(rowToAlbumItem);
 }
 
+export function addItems(db: ChromaDB, albumId: string, itemIds: readonly string[]): void {
+    if (itemIds.length === 0) return;
+    const insert = db.prepare("INSERT OR IGNORE INTO album_item (albumId, itemId, addedAt) VALUES (?, ?, ?)");
+    const run = db.transaction((ids: readonly string[]) => {
+        const now = new Date().toISOString();
+        for (const itemId of ids) insert.run(albumId, itemId, now);
+    });
+    run(itemIds);
+}
+
+export function removeItems(db: ChromaDB, albumId: string, itemIds: readonly string[]): void {
+    if (itemIds.length === 0) return;
+    const remove = db.prepare("DELETE FROM album_item WHERE albumId = ? AND itemId = ?");
+    const run = db.transaction((ids: readonly string[]) => {
+        for (const itemId of ids) remove.run(albumId, itemId);
+    });
+    run(itemIds);
+}
+
 export function rowToAlbum(row: DbRow): AlbumComp {
     let peekThumbs: string[] = [];
     if (typeof row.peek_thumbs === "string") {

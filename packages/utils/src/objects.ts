@@ -21,10 +21,12 @@ const itemProperties = keysOf<Item>()([
     "isScreenshot",
     "isScreenRecording",
     "liveVideo",
+    "liveVideoOriginalName",
     "rawOriginalName",
     "rawSize",
     "rawChecksum",
     "rawLiveVideo",
+    "rawLiveVideoOriginalName",
     "hasAdjustments",
     "createdAt",
 ]);

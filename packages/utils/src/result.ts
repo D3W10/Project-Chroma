@@ -1,14 +1,9 @@
-import { isAppError, toAppError } from "./errors.ts";
+import { toAppError } from "./errors.ts";
 import type { AppError, ResultCore } from "@project-chroma/core";
 
 export type Result<T, E = AppError> = ResultCore<T, E>;
 
 function rejectResult<E = AppError>(error: E): Result<never, E> {
-    console.log("[ERRO]", error);
-    if (isAppError(error)) {
-        return { success: false, data: null, error };
-    }
-
     return { success: false, data: null, error: error as E };
 }
 
@@ -27,9 +22,9 @@ export function toResult<T, E = AppError>(value: Result<T, E> | T): Result<T, E>
     return isResult(value) ? value : Result.accept(value);
 }
 
-export async function safeBound<T>(fn: () => Promise<Result<T>>): Promise<Result<T>> {
+export async function safeBound<T>(fn: () => Promise<Result<T> | T> | Result<T> | T): Promise<Result<T>> {
     try {
-        return fn();
+        return toResult(await fn());
     } catch (err) {
         return Result.reject(toAppError(err));
     }

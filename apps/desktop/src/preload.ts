@@ -16,6 +16,32 @@ const generatedBridge = createBridge(ipcDefinition) as ChromaBridge;
 
 const chromaBridge = {
     ...generatedBridge,
+    platform: () => process.platform,
+    fileUrl: filePath => `chroma-file://${encodeURIComponent(filePath)}`,
+    updates: {
+        ...generatedBridge.updates,
+        onState: listener => {
+            const wrappedListener = (_event: Electron.IpcRendererEvent, state: Parameters<Parameters<ChromaBridge["updates"]["onState"]>[0]>[0]) => {
+                listener(state);
+            };
+            ipcRenderer.on(ipc.UPDATE_STATE, wrappedListener);
+            return () => ipcRenderer.off(ipc.UPDATE_STATE, wrappedListener);
+        },
+    },
+    on: <TChannel extends ChromaEventChannel>(channel: TChannel, callback: ChromaEventListener<TChannel>) => {
+        const listener = (_event: Electron.IpcRendererEvent, payload: Parameters<ChromaEventListener<TChannel>>[0]) => {
+            callback(payload);
+        };
+        ipcRenderer.on(channel, listener);
+        return () => ipcRenderer.off(channel, listener);
+    },
+    onMenuAction: listener => {
+        const wrappedListener = (_event: Electron.IpcRendererEvent, action: Parameters<typeof listener>[0]) => {
+            listener(action);
+        };
+        ipcRenderer.on(ipc.MENU_ACTION, wrappedListener);
+        return () => ipcRenderer.off(ipc.MENU_ACTION, wrappedListener);
+    },
 } satisfies ChromaBridge;
 
 contextBridge.exposeInMainWorld("chroma", chromaBridge);

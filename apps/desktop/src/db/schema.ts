@@ -1,4 +1,6 @@
+import { Result } from "@project-chroma/utils";
 import type { ChromaDB } from "./connection.ts";
+import type { FixedLengthArray, LibraryHealth } from "@project-chroma/contracts/gallery";
 
 export const SCHEMA_VERSION = 0 as const;
 
@@ -27,10 +29,12 @@ export function createSchema(db: ChromaDB) {
                 isScreenshot INTEGER DEFAULT 0,
                 isScreenRecording INTEGER DEFAULT 0,
                 liveVideo TEXT,
+                liveVideoOriginalName TEXT,
                 rawOriginalName TEXT,
                 rawSize INTEGER,
                 rawChecksum TEXT,
                 rawLiveVideo TEXT,
+                rawLiveVideoOriginalName TEXT,
                 hasAdjustments INTEGER DEFAULT 0,
                 createdAt TEXT NOT NULL
             );
@@ -74,6 +78,17 @@ export function createSchema(db: ChromaDB) {
                 FOREIGN KEY (itemId) REFERENCES item (id) ON DELETE CASCADE,
                 FOREIGN KEY (tagId) REFERENCES tag (id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS item_search_index (
+                item_id TEXT PRIMARY KEY,
+                state INTEGER NOT NULL,
+                embedding BLOB,
+                embedding_dim INTEGER,
+                model_id TEXT,
+                error TEXT,
+                indexed_at TEXT,
+                FOREIGN KEY (item_id) REFERENCES item (id) ON DELETE CASCADE
+            );
         `);
 
         db.exec(`
@@ -115,4 +130,22 @@ export function sqlify(obj: object): Record<string, unknown> {
     }
 
     return clean;
+}
+
+export function migrateToLatest(db: ChromaDB): Result<undefined, LibraryHealth> {
+    const current = getLibraryVersion(db);
+    if (current > SCHEMA_VERSION) return Result.reject("recent");
+
+    for (const [index, upgrade] of (upgrades as readonly ((db: ChromaDB) => void)[]).entries()) {
+        const version = index + 1;
+        if (current >= version) continue;
+
+        const run = db.transaction(() => {
+            upgrade(db);
+            db.pragma(`user_version = ${version}`);
+        });
+        run();
+    }
+
+    return Result.accept();
 }

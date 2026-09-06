@@ -7,5 +7,13 @@ export default [
     "item:missing-source",
     "item:read-fail",
     "item:copy-fail",
+    "item:transfer-fail",
+    "item:export-fail",
+    "tag:not-found",
+    "tag:invalid",
+    "tag:operation-fail",
+    "ipc:invalid-arguments",
+    "binary:not-found",
+    "media:processing-failed",
     "unknown",
 ] as const;

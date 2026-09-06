@@ -1,12 +1,13 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
-import { RouterProvider, createRouter } from "@tanstack/react-router";
+import { RouterProvider, createHashHistory, createRouter } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { routeTree } from "./routeTree.gen";
 import "./styles.css";
 
 const router = createRouter({
+    history: window.location.protocol === "file:" ? createHashHistory() : undefined,
     routeTree,
     scrollRestoration: true,
     context: {

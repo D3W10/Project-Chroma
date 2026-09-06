@@ -60,7 +60,7 @@ export function ColorPicker({ className, disabled, color, onColorSelect, ...prop
                     <FieldLabel className="pl-0.5">
                         Custom Color
                         <Tooltip>
-                            <TooltipTrigger>
+                            <TooltipTrigger type="button">
                                 <IconHelpCircle className="size-4.5 text-primary" />
                             </TooltipTrigger>
                             <TooltipContent className="flex-col items-start">
@@ -98,6 +98,7 @@ function ColorOption({
 }) {
     return (
         <Button
+            type="button"
             variant="link"
             className={cn(
                 "h-6 p-0 relative flex-1 rounded-md hover:opacity-80 before:block before:absolute before:inset-0.5 before:rounded-sm before:transition-shadow",

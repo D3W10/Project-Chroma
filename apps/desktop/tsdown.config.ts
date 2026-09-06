@@ -30,7 +30,7 @@ export default defineConfig([
     },
     {
         ...shared,
-        entry: ["src/workers/**/*.ts"],
+        entry: ["src/workers/**/*.ts", "!src/workers/**/*.test.ts"],
         outDir: shared.outDir + "/workers",
     },
 ]);

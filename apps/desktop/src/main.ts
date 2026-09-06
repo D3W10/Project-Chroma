@@ -3,7 +3,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createConfigStore } from "./lib/config.ts";
 import { registerIpcHandlers } from "./commands/ipc.ts";
+import { configureApplicationMenu } from "./menu.ts";
 import { configureContentSecurityPolicy, registerChromaFileProtocol } from "./security.ts";
+import { createAutoUpdateService } from "./updater.ts";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = Boolean(process.env.ELECTRON_START_URL);
@@ -31,7 +33,10 @@ function getRendererUrl(): string {
         return process.env.ELECTRON_START_URL ?? "http://localhost:5173";
     }
 
-    return `file://${path.join(__dirname, "../../web/dist/index.html")}`;
+    const rendererPath = app.isPackaged
+        ? path.join(process.resourcesPath, "web/index.html")
+        : path.join(__dirname, "../../web/dist/index.html");
+    return `file://${rendererPath}`;
 }
 
 function revealWindow(window: BrowserWindow): void {
@@ -87,10 +92,17 @@ function createWindow() {
 
     mainWindow = window;
 }
+
 const config = createConfigStore({
     app,
     fileName: "config.json",
 });
+
+const autoUpdates = createAutoUpdateService({
+    app,
+    getWindow: () => mainWindow,
+});
+
 app.whenReady()
     .then(() => {
         configureContentSecurityPolicy(session.defaultSession, { isDev });
@@ -99,12 +111,31 @@ app.whenReady()
             app,
             config,
             getWindow: () => mainWindow,
+            autoUpdates,
         });
+        configureApplicationMenu({
+            app,
+            autoUpdates,
             getWindow: () => mainWindow,
+        });
+        autoUpdates.configure();
         createWindow();
+
+        app.on("activate", () => {
+            const existingWindow = mainWindow ?? BrowserWindow.getAllWindows()[0];
+            if (existingWindow) {
+                revealWindow(existingWindow);
+                return;
+            }
+
+            createWindow();
+        });
     })
-app.on("window-all-closed", () => {
-    if (process.platform !== "darwin") {
+    .catch(error => {
+        console.error("[desktop] Failed to start", error);
         app.quit();
-    }
+    });
+
+app.on("window-all-closed", () => {
+    app.quit();
 });

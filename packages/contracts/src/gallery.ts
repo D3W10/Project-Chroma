@@ -21,10 +21,12 @@ export interface Item {
     isScreenshot: boolean;
     isScreenRecording: boolean;
     liveVideo?: string;
+    liveVideoOriginalName?: string;
     rawOriginalName?: string;
     rawSize?: number;
     rawChecksum?: string;
     rawLiveVideo?: string;
+    rawLiveVideoOriginalName?: string;
     hasAdjustments: boolean;
     createdAt: string;
 }
@@ -61,6 +63,15 @@ export interface Tag {
 
 export interface TagItemRef extends Tag {
     addedAt: string;
+}
+
+export interface TagItemsRef extends Tag {
+    itemCount: number;
+}
+
+export interface ItemFileOperationSummary {
+    itemCount: number;
+    fileCount: number;
 }
 
 export interface ImportItem {
@@ -114,3 +125,20 @@ export interface LibraryMetadata {
 export interface LibraryMetadataPath extends LibraryMetadata {
     path: string;
 }
+
+export interface ItemSearchStatus {
+    totalItems: number;
+    indexedItems: number;
+    failedItems: number;
+    pendingItems: number;
+    indexing: boolean;
+}
+
+export interface ItemSearchMatch {
+    itemId: string;
+    score: number;
+}
+
+export type FixedLengthArray<T, N extends number> = N extends N ? (number extends N ? T[] : FixedLengthArrayBuilder<T, N, []>) : never;
+
+type FixedLengthArrayBuilder<T, N extends number, R extends T[]> = R["length"] extends N ? R : FixedLengthArrayBuilder<T, N, [...R, T]>;

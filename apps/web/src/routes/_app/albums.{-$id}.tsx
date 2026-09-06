@@ -1,12 +1,27 @@
+import { useEffect, useRef, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { IconArrowAutofitHeight, IconChevronLeft, IconFilter2, IconFolderPlus, IconInfoCircle, IconLayout, IconMinus, IconPencil, IconPlus, IconShare2 } from "@tabler/icons-react";
+import { motion, useScroll, useTransform } from "motion/react";
+import { animate } from "@/components/animated";
+import { CenterLayout } from "@/components/layout/centerLayout";
 import { Button } from "@project-chroma/ui/button";
 import { ButtonGroup } from "@project-chroma/ui/button-group";
 import { AlbumCard } from "@/components/AlbumCard";
+import { IconBox } from "@/components/IconBox";
+import { ItemGrid } from "@/components/ItemGrid";
 import { Toolbar, ToolbarGroup } from "@/components/Toolbar";
+import { AlbumContextMenu } from "@/components/overlays/AlbumContextMenu";
+import { CreateAlbumDialog } from "@/components/overlays/CreateAlbumDialog";
 import { useLibrary } from "@/lib/useLibrary";
 import { useNotifications } from "@/lib/useNotifications";
 import { useQuerySafe } from "@/lib/useQuerySafe";
+import { useSelection } from "@/lib/useSelection";
+import { useSettings } from "@/lib/useSettings";
 import { useStack } from "@/lib/useStack";
+import { getThumbPath, queryKeys, refreshSelectionData } from "@/lib/utils";
+import { cn, gridSizes, isResult } from "@project-chroma/utils";
+import type { Album, AlbumComp, ItemAlbumRef } from "@project-chroma/contracts/gallery";
 
 export const Route = createFileRoute("/_app/albums/{-$id}")({
     component: RouteComponent,
@@ -30,12 +45,78 @@ function RouteComponent() {
         placeholderData: [],
         enabled: !!id,
     });
+    const gridParent = useRef<HTMLDivElement>(null);
+    const { scrollY } = useScroll({ container: gridParent });
+    const {
+        selected: selectedAlbums,
+        setSelected: setSelectedAlbums,
+        handleSelect: handleSelectAlbumRef,
+        handleRightClick: handleRightClickAlbum,
+        unselectAll: unselectAllAlbums,
+    } = useSelection({ items: albums });
+    const {
+        selected: selectedItems,
+        setSelected: setSelectedItems,
+        handleSelect: handleSelectItemRef,
+        handleRightClick: handleRightClickItem,
+        unselectAll: unselectAllItems,
+    } = useSelection({ items });
     const { settings, updateSettings } = useSettings();
     const tree = useStack<string>();
+    const bannerY = useTransform(scrollY, v => v * 0.3);
+
+    const currentAlbum = (() => {
+        if (!id) return;
+
+        for (const [, queryData] of queryClient.getQueriesData<unknown>({ queryKey: queryKeys.albums(selectedLibrary?.id ?? "").slice(0, 2) })) {
+            const data = isResult(queryData) ? (queryData.success ? queryData.data : undefined) : queryData;
+            if (!Array.isArray(data)) continue;
+
+            const found = data.find(a => a.id === id);
+
+            if (found) return found;
+        }
+
+        return;
+    })();
+
+    const handleSelectAlbum = (event: React.MouseEvent, index: number, item: AlbumComp) => {
+        unselectAllItems();
+        handleSelectAlbumRef(event, index, item);
+    };
+
+    const handleSelectItem = (event: React.MouseEvent, index: number, item: ItemAlbumRef) => {
+        unselectAllAlbums();
+        handleSelectItemRef(event, index, item);
+    };
+
+    function onCreateSuccess(album: Album) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.albums(selectedLibrary?.id ?? "", id) });
+        pushNoti({
+            title: "Album created",
+            description: 'The album "' + album.name + '" was created successfully!',
+            type: "success",
+        });
+    }
+
     function onNavigate(album: Album) {
         tree.push(id ?? "");
         navigate({ to: "/albums/" + album.id });
     }
+
+    function unselectAll(e: React.MouseEvent) {
+        unselectAllAlbums(e);
+        unselectAllItems(e);
+    }
+
+    useEffect(() => {
+        refreshSelectionData(albums, setSelectedAlbums);
+    }, [albums]);
+
+    useEffect(() => {
+        refreshSelectionData(items, setSelectedItems);
+    }, [items]);
+
     return (
         <div className={cn("min-h-full relative overflow-y-auto scroll-hidden", albums.length <= 0 && "flex flex-col", isFetchingAlbums && "overflow-y-hidden")} ref={gridParent} onClick={unselectAll}>
             <Toolbar shade="full">
@@ -51,8 +132,151 @@ function RouteComponent() {
                     )}
                     <CreateAlbumDialog currentAlbum={id} open={openCreateAlbum} onOpenChange={setOpenCreateAlbum} onSuccess={onCreateSuccess} />
                 </ToolbarGroup>
+                <ToolbarGroup>
+                    <ButtonGroup>
+                        <Button variant="outline" size="icon" disabled={items.length === 0 || settings.libraryZoom === 0} onClick={() => updateSettings({ libraryZoom: settings.libraryZoom - 1 })}>
+                            <IconPlus className="size-5" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            disabled={items.length === 0 || settings.libraryZoom === gridSizes.length - 1}
+                            onClick={() => updateSettings({ libraryZoom: settings.libraryZoom + 1 })}
+                        >
+                            <IconMinus className="size-5" />
+                        </Button>
+                    </ButtonGroup>
+                    <ButtonGroup>
+                        <Button variant="outline" size="icon" disabled={items.length === 0} onClick={() => updateSettings({ libraryExpanded: !settings.libraryExpanded })}>
+                            <IconArrowAutofitHeight className="size-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={items.length === 0}>
+                            <IconFilter2 className="size-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={items.length === 0}>
+                            <IconLayout className="size-5" />
+                        </Button>
+                    </ButtonGroup>
+                    <ButtonGroup>
+                        <Button variant="outline" size="icon" disabled={selectedAlbums.length !== 1}>
+                            <IconPencil className="size-5" />
+                        </Button>
+                        <Button variant="outline" size="icon" disabled={selectedAlbums.length === 0}>
+                            <IconShare2 className="size-5" />
+                        </Button>
+                    </ButtonGroup>
+                </ToolbarGroup>
+            </Toolbar>
+            <div className="flex flex-col flex-1">
+                {items.length > 0 && (
+                    <motion.div className="w-full h-68 absolute top-0 left-0 mask-b-from-60% z-0" style={{ y: bannerY }}>
+                        {currentAlbum?.selectedBanner === 1 && currentAlbum?.bannerPhoto ? (
+                            <img src={getThumbPath(currentAlbum.bannerPhoto, selectedLibrary?.path)} className="size-full object-cover" />
+                        ) : (
+                            <img src={getThumbPath(items[2].id, selectedLibrary?.path)} className="size-full object-cover" />
+                        )}
+                    </motion.div>
+                )}
+                {currentAlbum && (
+                    <div className={cn("p-4 flex flex-col justify-end z-1", items.length > 0 ? "h-44" : "h-18")}>
+                        <h1 className="text-4xl font-bold drop-shadow-md">{currentAlbum.name}</h1>
+                        {currentAlbum.description && <p className="text-muted-foreground mb-2">{currentAlbum.description}</p>}
+                    </div>
+                )}
+                {items.length === 0 ? (
+                    <div className={cn("z-1", albums.length > 0 ? "px-4 pt-1 pb-4 grid gap-4 grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5" : "flex flex-col flex-1 absolute inset-0")}>
+                        {isFetchingAlbums ? (
+                            <GridLoading />
+                        ) : albums.length > 0 ? (
+                            albums.map((album, i) => (
+                                <AlbumItem
+                                    album={album}
+                                    index={i}
+                                    selectedAlbums={selectedAlbums}
+                                    handleSelect={handleSelectAlbum}
+                                    handleRightClick={handleRightClickAlbum}
+                                    handleNavigate={onNavigate}
+                                    key={album.id}
+                                />
+                            ))
+                        ) : (
+                            <GridEmpty id={id} onAdd={() => setOpenCreateAlbum(true)} onLibrary={() => navigate({ to: "/" })} />
+                        )}
+                    </div>
+                ) : (
+                    albums.length > 0 && (
+                        <div className="p-4 flex gap-4 overflow-x-auto z-1 scroll-hidden">
+                            {albums.map((album, i) => (
+                                <div key={album.id}>
+                                    <AlbumItem
+                                        album={album}
+                                        index={i}
+                                        size="sm"
+                                        selectedAlbums={selectedAlbums}
+                                        handleSelect={handleSelectAlbum}
+                                        handleRightClick={handleRightClickAlbum}
+                                        handleNavigate={onNavigate}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )
+                )}
+                {items.length > 0 && (
+                    <div className="px-2 flex-1 min-h-0 z-1">
+                        <ItemGrid
+                            items={items}
+                            isFetching={isFetchingItems}
+                            parent={gridParent}
+                            isAlbum={true}
+                            selected={selectedItems}
+                            setSelected={setSelectedItems}
+                            viewingItem={undefined}
+                            setViewingItem={() => {}}
+                            handleSelect={handleSelectItem}
+                            handleRightClick={handleRightClickItem}
+                            empty={<></>}
+                        />
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
+
+interface AlbumItemProps {
+    album: AlbumComp;
+    index: number;
+    size?: "md" | "sm";
+    selectedAlbums: AlbumComp[];
+    handleSelect: (event: React.MouseEvent, index: number, item: AlbumComp) => unknown;
+    handleRightClick: (index: number, item: AlbumComp) => unknown;
+    handleNavigate: (album: AlbumComp) => unknown;
+}
+
+function AlbumItem({ album, index, size, selectedAlbums, handleSelect, handleRightClick, handleNavigate }: AlbumItemProps) {
+    return (
+        <AlbumContextMenu selected={selectedAlbums} onEdit={() => {}} onDelete={() => {}}>
+            <AlbumCard
+                album={album}
+                selected={!!selectedAlbums.find(s => s.id === album.id)}
+                size={size}
+                onClick={e => handleSelect(e, index, album)}
+                onDoubleClick={() => handleNavigate(album)}
+                onContextMenu={() => handleRightClick(index, album)}
+            />
+        </AlbumContextMenu>
+    );
+}
+
+function GridLoading() {
+    return Array(30)
+        .fill(null)
+        .map((_, i) => (
+            <div key={i} className="w-full bg-foreground/5 rounded-sm aspect-5/4 animate-pulse delay-(--loading-delay)" style={{ "--loading-delay": `${i * 0.05}s` } as React.CSSProperties} />
+        ));
+}
+
 function GridEmpty({ id, onAdd, onLibrary }: { id?: string; onAdd: () => unknown; onLibrary: () => unknown }) {
     return !id ? (
         <CenterLayout>

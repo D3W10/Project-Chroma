@@ -3,6 +3,7 @@ export * from "@project-chroma/core";
 export * from "./result.ts";
 export * from "./errors.ts";
 export * from "./objects.ts";
+export * from "./export.ts";
 
 export function rollbackStack() {
     const stack: (() => Promise<void>)[] = [];

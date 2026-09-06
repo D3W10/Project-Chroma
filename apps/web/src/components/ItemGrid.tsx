@@ -7,6 +7,7 @@ import { ItemContextMenu } from "@/components/overlays/ItemContextMenu";
 import { useAction } from "@/lib/useAction";
 import { useLibrary } from "@/lib/useLibrary";
 import { useSettings } from "@/lib/useSettings";
+import { formatDuration, getThumbPath, pathToStem, QUICK_EASE } from "@/lib/utils";
 import type { Item } from "@project-chroma/contracts/gallery";
 
 interface ItemGridProps<T extends Item> {
@@ -48,6 +49,24 @@ export function ItemGrid<T extends Item>({ items, isFetching, parent, isAlbum, s
                 height: items.length > 0 ? virtualizer.getTotalSize() + 16 : undefined,
             }}
         >
+            {isFetching
+                ? Array(6)
+                      .fill(null)
+                      .map((_, i) => (
+                          <div key={i} className={cn("w-full mb-1 last:mb-0 grid px-2 gap-1", gridSizes[settings.libraryZoom])}>
+                              {Array(gridSizesNum[settings.libraryZoom])
+                                  .fill(null)
+                                  .map((_, j) => (
+                                      <div
+                                          key={j}
+                                          className="size-full bg-muted rounded-sm aspect-square animate-pulse delay-(--loading-delay)"
+                                          style={{ "--loading-delay": `${(i + j) * 0.2}s` } as React.CSSProperties}
+                                      />
+                                  ))}
+                          </div>
+                      ))
+                : items.length > 0
+                  ? virtualizer.getVirtualItems().map(row => {
                         const rowStart = row.index * columns;
                         const rowItems = items.slice(rowStart, rowStart + columns);
 
@@ -78,6 +97,12 @@ export function ItemGrid<T extends Item>({ items, isFetching, parent, isAlbum, s
                                 })}
                             </div>
                         );
+                    })
+                  : empty}
+        </div>
+    );
+}
+
 interface GridItemProps {
     item: Item;
     selected: boolean;
